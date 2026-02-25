@@ -16,7 +16,7 @@ class ContentScript {
     }
 
     if (response.overrideSRC) {
-      console.log('Banana Burner: OverrideSRC enabled, customizing UI...');
+      console.log('Banana Burner: OverrideSRC is enabled...');
       localStorage.setItem('OSRC', 'true');
 
       this.injectLocalStorageHook();
@@ -144,6 +144,11 @@ class ContentScript {
         this.sendMessage({
           action: 'scriptUpdateDetected',
           version: event.data.version
+        });
+      } else if (event.data.action === 'setShowAds') {
+        this.sendMessage({
+          action: 'setShowAds',
+          enabled: event.data.enabled
         });
       }
     });
