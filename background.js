@@ -522,21 +522,56 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         case 'proxyFetch': {
             const { url, options } = request;
-            console.log('Banana Burner: Proxying fetch to:', url);
+            //console.log('Banana Burner: Proxying fetch to:', url);
 
             (async () => {
                 try {
                     const targetUrl = new URL(url);
-                    if (targetUrl.hostname.includes('bot-hosting.net') || targetUrl.hostname.includes('bot-hosting.cloud')) {
-                        const cookies = await chrome.cookies.getAll({ domain: targetUrl.hostname });
+                    const hostname = targetUrl.hostname;
+
+                    const allowedDomains = [
+                        'bot-hosting.net',
+                        'bot-hosting.cloud',
+                        'discord.com',
+                        'cdn.discordapp.com',
+                        'github.com',
+                        'raw.githubusercontent.com',
+                        'livestatustracker.com',
+                        'featurebase.app'
+                    ];
+
+                    const isAllowed = allowedDomains.some(domain =>
+                        hostname === domain || hostname.endsWith('.' + domain)
+                    );
+
+                    if (!isAllowed) {
+                        throw new Error(`SSRF Blocked: External domain '${hostname}' is not whitelisted.`);
+                    }
+
+                    const isBotHosting = hostname.endsWith('bot-hosting.net') || hostname.endsWith('bot-hosting.cloud');
+                    const isMarketAPI = targetUrl.port === '20868';
+                    const fetchOptions = { ...options };
+
+                    if (isBotHosting && !isMarketAPI) {
+                        const cookies = await chrome.cookies.getAll({ domain: hostname });
                         const xsrfCookie = cookies.find(c => c.name === 'XSRF-TOKEN');
                         if (xsrfCookie) {
-                            options.headers = options.headers || {};
-                            options.headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfCookie.value);
+                            fetchOptions.headers = fetchOptions.headers || {};
+                            fetchOptions.headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfCookie.value);
+                        }
+                        fetchOptions.credentials = 'include';
+                    } else {
+                        // EXT
+                        fetchOptions.credentials = 'omit';
+                        if (fetchOptions.headers) {
+                            delete fetchOptions.headers['X-XSRF-TOKEN'];
+                            if (isMarketAPI) {
+                                delete fetchOptions.headers['Authorization'];
+                            }
                         }
                     }
 
-                    const response = await fetch(url, { ...options, credentials: 'include' });
+                    const response = await fetch(url, fetchOptions);
                     const status = response.status;
                     const ok = response.ok;
                     const statusText = response.statusText;
@@ -570,6 +605,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
             if (subAction === 'connect') {
                 try {
+                    const targetUrl = new URL(url);
+                    const hostname = targetUrl.hostname;
+                    const allowedDomains = [
+                        'bot-hosting.net',
+                        'bot-hosting.cloud',
+                        'discord.com',
+                        'cdn.discordapp.com',
+                        'github.com',
+                        'raw.githubusercontent.com',
+                        'livestatustracker.com',
+                        'featurebase.app'
+                    ];
+
+                    const isAllowed = allowedDomains.some(domain =>
+                        hostname === domain || hostname.endsWith('.' + domain)
+                    );
+
+                    if (!isAllowed) {
+                        throw new Error(`WebSocket SSRF Blocked: External domain '${hostname}' is not whitelisted.`);
+                    }
+
                     if (activeWebSockets.has(socketKey)) {
                         try { activeWebSockets.get(socketKey).close(); } catch (e) { }
                     }
