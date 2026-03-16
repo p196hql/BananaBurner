@@ -1,9 +1,22 @@
 class ContentScript {
   constructor() {
+    const existingNonce = document.documentElement.getAttribute('data-bh-bridge-nonce');
+    this.bridgeNonce = existingNonce || (Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15));
+
+    if (!existingNonce) {
+      document.documentElement.setAttribute('data-bh-bridge-nonce', this.bridgeNonce);
+    }
+
     this.scriptInjected = false;
     this.cloudflareChecked = false;
     this.setupMessageBridge();
-    this.init();
+
+    const alreadyInjected = document.documentElement.hasAttribute('data-bh-injected');
+    if (!alreadyInjected) {
+      this.init();
+    } else {
+      console.log('Banana Burner: Bridge re-synced.');
+    }
   }
 
   async init() {
@@ -37,7 +50,7 @@ class ContentScript {
     }
 
     localStorage.setItem('OSRC', 'false');
-    console.log('Banana Burner: Starting injection process...');
+    console.log('Banana Burner: trying to inject...');
 
     this.waitForCloudflareToClear().then(() => {
       this.injectScript();
@@ -45,6 +58,8 @@ class ContentScript {
 
     this.setupMutationObserver();
   }
+
+
 
   injectLocalStorageHook() {
     console.log('Banana Burner: Injecting OSRC localStorage hook via external script...');
@@ -68,8 +83,9 @@ class ContentScript {
     try {
       const script = document.createElement('script');
       script.src = chrome.runtime.getURL('injected.js');
+      script.dataset.nonce = this.bridgeNonce;
       script.onload = function () {
-        this.remove();
+        // moved to injected.js
       };
       (document.head || document.documentElement).appendChild(script);
       this.scriptInjected = true;
@@ -83,8 +99,12 @@ class ContentScript {
   setupMessageBridge() {
     window.addEventListener('message', (event) => {
       if (!event.data || event.data.source !== 'banana-burner') return;
+      if (event.data.nonce !== this.bridgeNonce) {
+        console.warn(`Banana Burner: Blocked message with invalid nonce (action: ${event.data.action}). Expected: ${this.bridgeNonce.substring(0, 4)}..., Got: ${String(event.data.nonce).substring(0, 4)}...`);
+        return;
+      }
 
-      console.log('Banana Burner: Bridge caught message:', event.data.action, event.data);
+      //console.log('Banana Burner: Bridge caught message:', event.data.action, event.data);
 
       if (event.data.action === 'sendNotification') {
         this.sendMessage({
