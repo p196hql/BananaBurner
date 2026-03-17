@@ -15,21 +15,22 @@ class ContentScript {
     if (!alreadyInjected) {
       this.init();
     } else {
-      console.log('Banana Burner: Bridge re-synced.');
+      console.log('[BananaBurner] Bridge re-synced.');
+      this.osrcT();
     }
   }
-
-  async init() {
-    console.log('Banana Burner: Content script initialized, checking status...');
-
-    const response = await this.sendMessage({ action: 'getStatus' });
+  //
+  async osrcT(response) {
+    if (!response) {
+      response = await this.sendMessage({ action: 'getStatus' });
+    }
     if (!response || !response.enabled) {
-      console.log('Banana Burner: Extension is disabled');
+      console.log('[BananaBurner] Extension is disabled');
       return;
     }
 
     if (response.overrideSRC) {
-      console.log('Banana Burner: OverrideSRC is enabled...');
+      console.log('[BananaBurner] OverrideSRC is enabled...');
       localStorage.setItem('OSRC', 'true');
 
       this.injectLocalStorageHook();
@@ -46,13 +47,32 @@ class ContentScript {
       link.href = iconUrl;
 
       this.scriptInjected = true;
-      return;
+      return true;
     }
 
     localStorage.setItem('OSRC', 'false');
-    console.log('Banana Burner: trying to inject...');
+    return false;
+  }
+  //
+  async init(osrcF = false) {
+    console.log('[BananaBurner] Content script initialized, checking status...');
 
-    this.waitForCloudflareToClear().then(() => {
+    if (!window.location.pathname.startsWith('/panel')) {
+      console.log('[BananaBurner] Not on /panel, skipping injection.');
+      return;
+    }
+
+    const response = await this.sendMessage({ action: 'getStatus' });
+    if (!response || !response.enabled) {
+      console.log('[BananaBurner] Extension is disabled');
+      return;
+    }
+    const osrcT = await this.osrcT(response);
+    if (osrcT) return;
+
+    console.log('[BananaBurner] trying to inject...');
+
+    this.CfClear().then(() => {
       this.injectScript();
     });
 
@@ -62,7 +82,7 @@ class ContentScript {
 
 
   injectLocalStorageHook() {
-    console.log('Banana Burner: Injecting OSRC localStorage hook via external script...');
+    console.log('[BananaBurner] Injecting OSRC localStorage hook via external script...');
     try {
       localStorage.setItem('OSRC', 'true');
 
@@ -73,7 +93,7 @@ class ContentScript {
       };
       (document.head || document.documentElement).appendChild(script);
     } catch (error) {
-      console.error('Banana Burner: Failed to inject OSRC hook:', error);
+      console.error('[BananaBurner] Failed to inject OSRC hook:', error);
     }
   }
 
@@ -89,10 +109,10 @@ class ContentScript {
       };
       (document.head || document.documentElement).appendChild(script);
       this.scriptInjected = true;
-      console.log('Banana Burner: Bananas injected successfully! 🍌');
+      console.log('[BananaBurner] Bananas injected successfully! 🍌');
       this.sendMessage({ action: 'injectionComplete' });
     } catch (error) {
-      console.error('Banana Burner: Failed to inject script:', error);
+      console.error('[BananaBurner] Failed to inject script:', error);
     }
   }
 
@@ -100,11 +120,11 @@ class ContentScript {
     window.addEventListener('message', (event) => {
       if (!event.data || event.data.source !== 'banana-burner') return;
       if (event.data.nonce !== this.bridgeNonce) {
-        console.warn(`Banana Burner: Blocked message with invalid nonce (action: ${event.data.action}). Expected: ${this.bridgeNonce.substring(0, 4)}..., Got: ${String(event.data.nonce).substring(0, 4)}...`);
+        console.warn(`[BananaBurner] Blocked message with invalid nonce (action: ${event.data.action}). Expected: ${this.bridgeNonce.substring(0, 4)}..., Got: ${String(event.data.nonce).substring(0, 4)}...`);
         return;
       }
 
-      //console.log('Banana Burner: Bridge caught message:', event.data.action, event.data);
+      //console.log('[BananaBurner] Bridge caught message:', event.data.action, event.data);
 
       if (event.data.action === 'sendNotification') {
         this.sendMessage({
@@ -112,9 +132,9 @@ class ContentScript {
           title: event.data.title,
           message: event.data.message
         }).then(response => {
-          console.log('Banana Burner: Background notification response:', response);
+          console.log('[BananaBurner] Background notification response:', response);
         }).catch(err => {
-          console.error('Banana Burner: Bridge error forwarding notification:', err);
+          console.error('[BananaBurner] Bridge error forwarding notification:', err);
         });
       } else if (event.data.action === 'proxyFetch') {
         this.sendMessage({
@@ -188,7 +208,7 @@ class ContentScript {
       subtree: true
     });
   }
-
+  //
   async checkCloudflare() {
     const cloudflareSelectors = [
       '#cf-content',
@@ -200,7 +220,6 @@ class ContentScript {
       '.turnstile-wrapper',
       '.hcaptcha-box'
     ];
-
     const cloudflareIframeUrls = [
       'challenges.cloudflare.com',
       'turnstile.cloudflare.com',
@@ -208,7 +227,6 @@ class ContentScript {
       '/cdn-cgi/challenge',
       '/cdn-cgi/l/chk_jschl'
     ];
-
     const cloudflareTextPatterns = [
       /verify you are human/i,
       /complete the action below/i,
@@ -219,19 +237,17 @@ class ContentScript {
       /you will be redirected/i,
       /ddos protection by cloudflare/i
     ];
-
     for (const selector of cloudflareSelectors) {
       if (document.querySelector(selector)) {
-        console.log('Banana Burner: Found Cloudflare element:', selector);
+        console.log('[BananaBurner] Found Cloudflare element:', selector);
         return true;
       }
     }
-
     const iframes = document.querySelectorAll('iframe');
     for (const iframe of iframes) {
       const src = iframe.src || '';
       if (cloudflareIframeUrls.some(url => src.includes(url))) {
-        console.log('Banana Burner: Found Cloudflare iframe:', src);
+        console.log('[BananaBurner] Found Cloudflare iframe:', src);
         return true;
       }
     }
@@ -240,15 +256,16 @@ class ContentScript {
     for (const form of forms) {
       const action = form.getAttribute('action') || '';
       if (cloudflareIframeUrls.some(url => action.includes(url))) {
-        console.log('Banana Burner: Found Cloudflare form:', action);
+        console.log('[BananaBurner] Found Cloudflare form:', action);
         return true;
       }
     }
 
+
     const pageText = document.body.innerText || document.documentElement.innerText || '';
     for (const pattern of cloudflareTextPatterns) {
       if (pattern.test(pageText)) {
-        console.log('Banana Burner: Found Cloudflare text:', pattern);
+        console.log('[BananaBurner] Found Cloudflare text:', pattern);
         return true;
       }
     }
@@ -261,30 +278,30 @@ class ContentScript {
     ];
 
     if (challengeIndicators.some(indicator => indicator !== null)) {
-      console.log('Banana Burner: Found Cloudflare challenge indicator');
+      console.log('[BananaBurner] Found Cloudflare challenge indicator');
       return true;
     }
 
     this.cloudflareChecked = true;
     return false;
   }
-
-  async waitForCloudflareToClear() {
+  //
+  async CfClear() {
     return new Promise((resolve) => {
       const checkInterval = setInterval(async () => {
         const hasCloudflare = await this.checkCloudflare();
         if (!hasCloudflare) {
           clearInterval(checkInterval);
-          console.log('Banana Burner: Cloudflare cleared, injecting...');
+          console.log('[BananaBurner] Cloudflare cleared, injecting...');
           resolve();
         } else {
-          console.log('Banana Burner: Still waiting for Cloudflare to clear...');
+          console.log('[BananaBurner] Still waiting for Cloudflare to clear...');
         }
       }, 1000);
 
       setTimeout(() => {
         clearInterval(checkInterval);
-        console.log('Banana Burner: Cloudflare check timeout, injecting anyway');
+        console.log('[BananaBurner] Cloudflare check timeout, injecting anyway');
         resolve();
       }, 30000);
     });
@@ -292,7 +309,7 @@ class ContentScript {
 
   sendMessage(message) {
     if (!chrome.runtime || !chrome.runtime.id) {
-      console.warn('Banana Burner: Bridge lost connection to extension. Please refresh the page.');
+      console.warn('[BananaBurner] Bridge lost connection to extension. Please refresh the page.');
       return Promise.reject(new Error('Context invalidated'));
     }
     return new Promise((resolve, reject) => {
@@ -301,7 +318,7 @@ class ContentScript {
           if (chrome.runtime.lastError) {
             const err = chrome.runtime.lastError;
             if (err.message.includes('context invalidated')) {
-              console.warn('Banana Burner: Extension reloaded. Please refresh the page to restore notifications.');
+              console.warn('[BananaBurner] Extension reloaded. Please refresh the page to restore notifications.');
             }
             reject(err);
           } else {
@@ -310,7 +327,7 @@ class ContentScript {
         });
       } catch (e) {
         if (e.message.includes('context invalidated')) {
-          console.warn('Banana Burner: Bridge severed by extension reload. Please refresh the page.');
+          console.warn('[BananaBurner] Bridge severed by extension reload. Please refresh the page.');
         }
         reject(e);
       }
@@ -320,16 +337,17 @@ class ContentScript {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'forceInject') {
-    console.log('Banana Burner: Force injection requested');
+    console.log('[BananaBurner] Force injection requested');
     const contentScript = new ContentScript();
     sendResponse({ success: true });
   } else if (request.source === 'banana-burner-ws') {
     window.postMessage(request, '*');
   }
 });
-
+//
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => new ContentScript());
 } else {
   new ContentScript();
 }
+//////////////
