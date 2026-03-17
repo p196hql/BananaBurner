@@ -1,6 +1,6 @@
 const UPDATE_ALARM_NAME = 'scriptUpdateCheck';
 const activeWebSockets = new Map();
-
+//
 class ScriptManager {
     constructor() {
         this.initialize();
@@ -20,9 +20,9 @@ class ScriptManager {
             await chrome.alarms.create(UPDATE_ALARM_NAME, {
                 periodInMinutes: 60
             });
-            console.log('Banana Burner: Update alarm scheduled (every 60 min).');
+            console.log('[BananaBurner] Update alarm scheduled (every 60 min).');
         } catch (e) {
-            console.error('Banana Burner: Failed to create alarm:', e);
+            console.error('[BananaBurner] Failed to create alarm:', e);
         }
     }
 
@@ -58,12 +58,12 @@ class ScriptManager {
                     removeRuleIds: [4, 16],
                     addRules: [ruleNet, ruleCloud]
                 });
-                console.log('Banana Burner: QUIC stripping rule applied.');
+                console.log('[BananaBurner] QUIC stripping rule applied.');
             } catch (e) { console.error('QUIC Error:', e); }
         } else {
             try {
                 await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: [4, 16] });
-                console.log('Banana Burner: QUIC stripping rule removed.');
+                console.log('[BananaBurner] QUIC stripping rule removed.');
             } catch (e) { }
         }
     }
@@ -131,18 +131,18 @@ class ScriptManager {
                     removeRuleIds: [3, 5, 10, 11, 12, 13, 14, 15],
                     addRules: [rule, ...blockingRules]
                 });
-                console.log('Banana Burner: Override redirection (JS) and blocking rules applied.');
+                console.log('[BananaBurner] Override redirection (JS) and blocking rules applied.');
             } catch (error) {
-                console.error('Banana Burner: Failed to apply override/blocking rules:', error);
+                console.error('[BananaBurner] Failed to apply override/blocking rules:', error);
             }
         } else {
             try {
                 await chrome.declarativeNetRequest.updateDynamicRules({
                     removeRuleIds: [3, 5, 10, 11, 12, 13, 14, 15]
                 });
-                console.log('Banana Burner: Override redirection and blocking rules removed.');
+                console.log('[BananaBurner] Override redirection and blocking rules removed.');
             } catch (error) {
-                console.error('Banana Burner: Failed to remove override rules:', error);
+                console.error('[BananaBurner] Failed to remove override rules:', error);
             }
         }
     }
@@ -234,9 +234,9 @@ class ScriptManager {
                 removeRuleIds: [1, 2, 6, 17, 18],
                 addRules: rules
             });
-            console.log('Banana Burner: Header modification rules applied.');
+            console.log('[BananaBurner] Header modification rules applied.');
         } catch (error) {
-            console.error('Banana Burner: Failed to apply header rules:', error);
+            console.error('[BananaBurner] Failed to apply header rules:', error);
         }
     }
 
@@ -267,7 +267,7 @@ class ScriptManager {
                 await this.setOverrideSRC(true);
             }
         } catch (error) {
-            console.log('Banana Burner: Migration completed or not needed');
+            console.log('[BananaBurner] Migration completed or not needed');
         }
     }
 
@@ -284,7 +284,7 @@ class ScriptManager {
 
     async checkScriptUpdate() {
         try {
-            console.log('Banana Burner: Checking for script updates (sv.dat)...');
+            console.log('[BananaBurner] Checking for script updates (sv.dat)...');
 
             const response = await fetch('https://raw.githubusercontent.com/relentiousdragon/BananaBurner/main/sv.dat?t=' + Date.now());
             if (!response.ok) throw new Error(`sv.dat fetch failed: HTTP ${response.status}`);
@@ -300,7 +300,7 @@ class ScriptManager {
             const updateAvailable = this.isVersionNewer(currentScriptVersion, remoteScriptVersion);
             await this.setInStorage('scriptUpdateAvailable', updateAvailable, true);
 
-            console.log(`Banana Burner: Script check: current v${currentScriptVersion}, remote v${remoteScriptVersion}, update? ${updateAvailable}`);
+            console.log(`[BananaBurner] Script check: current v${currentScriptVersion}, remote v${remoteScriptVersion}, update? ${updateAvailable}`);
 
             this.checkExtensionUpdate();
 
@@ -311,7 +311,7 @@ class ScriptManager {
             };
 
         } catch (error) {
-            console.error('Banana Burner: Failed to check script update:', error);
+            console.error('[BananaBurner] Failed to check script update:', error);
             return { error: error.message };
         }
     }
@@ -327,12 +327,12 @@ class ScriptManager {
 
             if (this.isVersionNewer(currentVersion, remoteVersion)) {
                 await this.setInStorage('extensionUpdateAvailable', remoteVersion, true);
-                console.log(`Banana Burner: New extension version available: ${remoteVersion}`);
+                console.log(`[BananaBurner] New extension version available: ${remoteVersion}`);
             } else {
                 await this.setInStorage('extensionUpdateAvailable', false, true);
             }
         } catch (e) {
-            console.error('Banana Burner: Extension update check failed:', e);
+            console.error('[BananaBurner] Extension update check failed:', e);
         }
     }
 
@@ -384,7 +384,7 @@ const scriptManager = new ScriptManager();
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name === UPDATE_ALARM_NAME) {
-        console.log('Banana Burner: Alarm fired, checking for script updates...');
+        console.log('[BananaBurner] Alarm fired, checking for script updates...');
         await scriptManager.checkScriptUpdate();
     }
 });
@@ -393,7 +393,7 @@ chrome.webNavigation.onCompleted.addListener(async (details) => {
     if (details.url.includes('/panel/')) {
         const enabled = await scriptManager.isEnabled();
         if (enabled) {
-            console.log('Banana Burner: Page loaded, bananajection ready 🍌');
+            console.log('[BananaBurner] Page loaded, bananajection ready 🍌');
         }
     }
 });
@@ -465,12 +465,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             return true;
 
         case 'injectionComplete':
-            console.log('Banana Burner: Script injected successfully!');
+            console.log('[BananaBurner] Script injected successfully!');
             sendResponse({ success: true });
             return true;
 
         case 'sendNotification': {
-            console.log('Banana Burner: Received notification request:', request);
+            console.log('[BananaBurner] Received notification request:', request);
 
             const notificationOptions = {
                 type: 'basic',
@@ -483,9 +483,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             chrome.notifications.create(notificationOptions, (notificationId) => {
                 if (chrome.runtime.lastError) {
                     const error = chrome.runtime.lastError.message;
-                    console.error('Banana Burner: Primary notification failed:', error);
+                    console.error('[BananaBurner] Primary notification failed:', error);
 
-                    console.log('Banana Burner: Attempting fallback without icon...');
+                    console.log('[BananaBurner] Attempting fallback without icon...');
                     chrome.notifications.create({
                         type: 'basic',
                         iconUrl: '',
@@ -493,13 +493,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         message: request.message || ''
                     }, (fallbackId) => {
                         if (chrome.runtime.lastError) {
-                            console.error('Banana Burner: Fallback notification also failed:', chrome.runtime.lastError.message);
+                            console.error('[BananaBurner] Fallback notification also failed:', chrome.runtime.lastError.message);
                         } else {
-                            console.log('Banana Burner: Fallback notification created:', fallbackId);
+                            console.log('[BananaBurner] Fallback notification created:', fallbackId);
                         }
                     });
                 } else {
-                    console.log('Banana Burner: Notification created successfully:', notificationId);
+                    console.log('[BananaBurner] Notification created successfully:', notificationId);
                 }
             });
             sendResponse({ success: true, logged: true });
@@ -522,7 +522,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         case 'proxyFetch': {
             const { url, options } = request;
-            //console.log('Banana Burner: Proxying fetch to:', url);
+            //console.log('[BananaBurner] Proxying fetch to:', url);
 
             (async () => {
                 try {
@@ -549,10 +549,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     }
 
                     const isBotHosting = hostname.endsWith('bot-hosting.net') || hostname.endsWith('bot-hosting.cloud');
-                    const isMarketAPI = targetUrl.port === '20868';
                     const fetchOptions = { ...options };
 
-                    if (isBotHosting && !isMarketAPI) {
+                    if (isBotHosting) {
                         const cookies = await chrome.cookies.getAll({ domain: hostname });
                         const xsrfCookie = cookies.find(c => c.name === 'XSRF-TOKEN');
                         if (xsrfCookie) {
@@ -565,9 +564,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         fetchOptions.credentials = 'omit';
                         if (fetchOptions.headers) {
                             delete fetchOptions.headers['X-XSRF-TOKEN'];
-                            if (isMarketAPI) {
-                                delete fetchOptions.headers['Authorization'];
-                            }
                         }
                     }
 
@@ -592,7 +588,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                     sendResponse({ success: true, status, ok, statusText, data });
                 } catch (error) {
-                    console.error('Banana Burner: Proxy fetch error:', error);
+                    console.error('[BananaBurner] Proxy fetch error:', error);
                     sendResponse({ success: false, error: error.message });
                 }
             })();
@@ -657,3 +653,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
     }
 });
+//////////////////
