@@ -76,5 +76,5 @@ You can request for all telemetry data by sending me a DM, all previous telemetr
 
 Update by reinstalling the extension.
 
-If there are any issues, let us know about it on Discord @agentzzrp or @paccman_0!
+If there are any issues, let us know about it on Discord @agentzzrp or @paccman_0!<br>
 Release #21 stable, some features are unavailable for userscript users.
