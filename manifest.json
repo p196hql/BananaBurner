@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BananaBurner 2979",
-  "version": "2979.1.0",
+  "version": "2979.1.1",
   "description": "MORE BANANAAAAA!11!",
   "permissions": [
     "activeTab",
@@ -10,23 +10,21 @@
     "scripting",
     "notifications",
     "declarativeNetRequest",
-    "declarativeNetRequestFeedback",
     "cookies",
     "alarms"
   ],
   "host_permissions": [
     "https://bot-hosting.net/*",
     "https://*.bot-hosting.net/*",
-    "http://*.bot-hosting.net/*",
     "wss://*.bot-hosting.net/*",
-    "ws://*.bot-hosting.net/*",
     "https://bot-hosting.cloud/*",
     "https://*.bot-hosting.cloud/*",
-    "http://*.bot-hosting.cloud/*",
     "wss://*.bot-hosting.cloud/*",
-    "ws://*.bot-hosting.cloud/*",
     "https://raw.githubusercontent.com/*"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
   "background": {
     "service_worker": "background.js"
   },
