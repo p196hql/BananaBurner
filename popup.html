@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="utf-8">
   <style>
@@ -14,6 +15,9 @@
       --text-secondary: #94a3b8;
       --border-color: #334155;
     }
+
+
+
     body {
       width: 360px;
       margin: 0;
@@ -212,6 +216,7 @@
       color: var(--text-secondary);
       border: 1px solid var(--border-color);
     }
+
     .update-banner {
       display: none;
       align-items: center;
@@ -239,6 +244,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="header">
@@ -250,6 +256,7 @@
         <div class="version">Version <span id="version">2979.1.0</span></div>
       </div>
     </div>
+
     <div id="updateBanner" class="update-banner">
       <span>Update Available (<span id="newVersion"></span>)</span>
       <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
@@ -273,6 +280,7 @@
           <span class="slider"></span>
         </label>
       </div>
+
       <div class="status-row" id="rowOverrideSRC">
         <span class="status-label">OverrideSRC</span>
         <label class="toggle-switch">
@@ -280,14 +288,22 @@
           <span class="slider"></span>
         </label>
       </div>
+
       <div class="status-row">
         <span class="status-label">Extension Version</span>
         <span class="status-value" id="ext-version">Loading...</span>
       </div>
+
     </div>
+
+
+
     <div id="message" class="message"></div>
   </div>
+
   <script src="popup.js"></script>
 </body>
+
 </html>
+
 <!--/////////////////// Termux Labs 2026  -->
