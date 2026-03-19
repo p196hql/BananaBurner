@@ -11,7 +11,6 @@ class ScriptManager {
         await this.checkScriptUpdate();
         await this.setupHeaderRules();
         await this.setupOverrideRules();
-        await this.setupQuicRules();
         await this.setupAlarm();
     }
 
@@ -26,47 +25,7 @@ class ScriptManager {
         }
     }
 
-    async setupQuicRules() {
-        const disabled = await this.getFromStorage('quicDisabled', false);
-        if (disabled) {
-            const ruleNet = {
-                id: 4,
-                priority: 4,
-                action: {
-                    type: 'modifyHeaders',
-                    responseHeaders: [{ header: 'Alt-Svc', operation: 'remove' }]
-                },
-                condition: {
-                    urlFilter: '*bot-hosting.net*',
-                    resourceTypes: ['main_frame', 'sub_frame', 'xmlhttprequest', 'script', 'stylesheet', 'image', 'websocket']
-                }
-            };
-            const ruleCloud = {
-                id: 16,
-                priority: 4,
-                action: {
-                    type: 'modifyHeaders',
-                    responseHeaders: [{ header: 'Alt-Svc', operation: 'remove' }]
-                },
-                condition: {
-                    urlFilter: '*bot-hosting.cloud*',
-                    resourceTypes: ['main_frame', 'sub_frame', 'xmlhttprequest', 'script', 'stylesheet', 'image', 'websocket']
-                }
-            };
-            try {
-                await chrome.declarativeNetRequest.updateDynamicRules({
-                    removeRuleIds: [4, 16],
-                    addRules: [ruleNet, ruleCloud]
-                });
-                console.log('[BananaBurner] QUIC stripping rule applied.');
-            } catch (e) { console.error('QUIC Error:', e); }
-        } else {
-            try {
-                await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: [4, 16] });
-                console.log('[BananaBurner] QUIC stripping rule removed.');
-            } catch (e) { }
-        }
-    }
+
 
     async setupOverrideRules() {
         const enabled = await this.isEnabled();
@@ -456,14 +415,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
             return true;
 
-        case 'setQuicDisabled':
-            scriptManager.setInStorage('quicDisabled', request.disabled, false).then(() => {
-                scriptManager.setupQuicRules().then(() => {
-                    sendResponse({ success: true });
-                });
-            });
-            return true;
-
         case 'injectionComplete':
             console.log('[BananaBurner] Script injected successfully!');
             sendResponse({ success: true });
@@ -653,4 +604,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
     }
 });
-//////////////////
+///////////////////
