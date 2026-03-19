@@ -6,7 +6,7 @@
     // IF YOU DOWNLOADED IT FROM ANYWHERE ELSE, DELETE AND REPORT IT TO TERMUX LABS
     // IF A STRANGER GAVE YOU THIS FILE 11 TIMES OUT OF 10 YOU ARE GETTING SCREWED.
     const CONFIG = {
-        SCRIPT_VERSION: '3.2', // *
+        SCRIPT_VERSION: '3.3', // *
         FAVICON_URL: 'https://raw.githubusercontent.com/relentiousdragon/BananaBurner/refs/heads/main/icons/icon48.png', // ?
         MAX_COINS_PER_DAY: 10, // *
         NORMAL_COIN_INTERVAL: localStorage.getItem('bh-normal-coin-interval') ? parseInt(localStorage.getItem('bh-normal-coin-interval')) : 10000, // ?
@@ -127,7 +127,17 @@
             .replace(/&lt;\/i&gt;/g, '</i>')
             .replace(/&lt;u&gt;/g, '<u>')
             .replace(/&lt;\/u&gt;/g, '</u>')
-            .replace(/&lt;br\s*\/?&gt;/g, '<br>');
+            .replace(/&lt;code&gt;/g, '<code>')
+            .replace(/&lt;\/code&gt;/g, '</code>')
+            .replace(/&lt;br\s*\/?&gt;/g, '<br>')
+            .replace(/&lt;span(.*?)&gt;/g, (match, p1) => {
+                const unescapedAttrs = p1
+                    .replace(/&quot;/g, '"')
+                    .replace(/&#039;/g, "'")
+                    .replace(/&amp;/g, '&');
+                return `<span${unescapedAttrs}>`;
+            })
+            .replace(/&lt;\/span&gt;/g, '</span>');
     };
 
     const BnLog = (tag, msg, ...args) => {
@@ -604,11 +614,6 @@
     //
     async function fetchWithRetry(url, options = {}, retries = 3, backoff = 300) {
         try {
-            const quicDisabled = localStorage.getItem('bh-quic-disabled') === 'true';
-            if (quicDisabled) {
-                options.headers = options.headers || {};
-                options.headers['X-Disable-QUIC'] = 'true';
-            }
             const response = await fetch(url, options);
 
             try {
@@ -789,7 +794,10 @@
     function loadFontAwesome() {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
+        link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css';
+        link.integrity = 'sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==';
+        link.crossOrigin = 'anonymous';
+        link.referrerPolicy = 'no-referrer';
         document.head.appendChild(link);
     }
 
@@ -922,8 +930,6 @@
             });
         });
     }
-
-    // bad,  don't enable this.
     function injectCursorGlowStyles() {
         const styleId = 'cursor-glow-styles';
         let style = document.getElementById(styleId);
@@ -2692,15 +2698,13 @@
                 <div class="sc-content">
                     <div class="sc-header">
                         <div class="sc-logo-wrapper">
-                            ${getBananaAsset(128)}
+                        ${getBananaAsset(128)}
                         </div>
                         <div class="sc-hero">
                             <div class="sc-credits seq-1">BANANABURNER 2979</div>
                             <div class="sc-sub-credits seq-2">TERMUX LABS</div>
                         </div>
-                        <div class="sc-security-badge seq-3">
-                            <i class="fas fa-shield-halved"></i> Usage Notice
-                        </div>
+           
                     </div>
                     
                     <div class="sc-body">
@@ -2710,13 +2714,20 @@
                             <br>Using scripts from untrusted sources can lead to <br>your credentials getting <span class="sc-danger">compromised</span>.
                             <br>If you already did use a script you didn't obtain from the official source, please reset your credentials (including all bot tokens), and delete the malicious script.
                         </p>
-                        <h2 class="sc-title seq-5">Share Statistics</h2>
-                        <p class="sc-text seq-6">
-                            By clicking <span class="sc-highlight">confirm</span> you agree to
-                            <br>sharing data about which node your server was created on (from the server creator),
-                            <br>debug information, coins, and other to <span class="sc-highlight">Termux Labs</span>.
-                            <br>Sensitive information will not be shared such as ports, email, passwords, etc.
-                            <br>This can be disabled from the settings if you don't want to share this, sharing this helps improve BananaBurner 2979.
+
+                        <h2 class="sc-title seq-5">Share Telemetry</h2>
+                        <p class="sc-text seq-6" style="margin-bottom: 0.5rem;">Helps improve BananaBurner 2979</p>
+                        <div class="sc-telemetry-row seq-6" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem;">
+                            <button id="sc-telemetry-toggle" class="sc-switch-btn active" style="position: relative; width: 46px; height: 24px; border: none; background: transparent; padding: 0; flex-shrink: 0; cursor: pointer; border-radius: 24px; outline: none;">
+                                <div class="slider round"></div>
+                            </button>
+                            <span style="font-size: 0.9em; color: rgba(255,255,255,0.7);">Enabled</span>
+                            <button id="sc-whats-telemetry" class="sc-btn sc-secondary" style="font-size: 0.75em; padding: 0.35rem 0.75rem; margin-left: auto;">What's Telemetry?</button>
+                        </div>
+
+                        <h2 class="sc-title seq-6">Your Data</h2>
+                        <p class="sc-text seq-7">
+                            You can request <span class="sc-highlight">all your  telemeetry data</span> or request its <span class="sc-danger">deletion</span> from Termux Labs by sending a DM to <span class="sc-highlight">@agentzzrp</span> on Discord.
                         </p>
                     </div>
 
@@ -2727,8 +2738,35 @@
                         </div>
                         <div class="sc-actions seq-8">
                             <button class="sc-btn sc-secondary sc-deny-btn">Exit</button>
-                            <button class="sc-btn sc-confirm-btn">Confirm</button>
+                            <button class="sc-btn sc-confirm-btn" disabled style="opacity: 0.5; cursor: not-allowed;">Scroll down</button>
                         </div>
+                    </div>
+                </div>
+
+                <div id="sc-telemetry-popup" style="display:none; position:fixed; inset:0; z-index:20001; background:rgba(0,0,0,0.85); align-items:center; justify-content:center;">
+                    <div class="sc-no-scroll" style="background:#1a1a2e; border:1px solid rgba(255,255,255,0.1); border-radius:12px; max-width:520px; width:90%; max-height:70vh; overflow-y:auto; padding:1.5rem; color:#fff; font-family:'Inter',system-ui,sans-serif;">
+                        <h3 style="margin:0 0 1rem; font-size:1.1em;"><i class="fas fa-database" style="margin-right:0.5rem;"></i>What Gets Sent</h3>
+                        <div style="background:#0d0d1a; border-radius:8px; padding:1rem; font-size:0.8em; font-family:monospace; white-space:pre-wrap; line-height:1.6; color:#a0a0c0;">userId: your user ID
+username: your username
+dailyCoins: coins collected today
+bCoins: current coin balance
+servers: number of servers owned
+sharedServers: number of shared servers
+pluginsInstalled: number of plugins installed
+pluginList: list of installed plugin names
+stats: usage statistics (check profile popup -> statistics)
+settings: your preferences (theme, toggles)
+ - server/URL quick actions are redacted
+themeName: active theme name
+version: script version
+debug:
+  engine: browser engine (chromium/gecko/webkit)
+  screen: screen resolution
+  pluginErrors: number of plugin errors
+  activePlugins: number of plugins active
+  devMode: developer mode state</div>
+                        <p style="margin:1rem 0 0.5rem; font-size:0.85em; color:rgba(255,255,255,0.6);">No passwords, tokens, emails, IPs, or server content is ever collected.</p>
+                        <button id="sc-telemetry-popup-close" style="width:100%; padding:0.6rem; background:rgba(255,255,255,0.1); border:none; border-radius:8px; color:#fff; cursor:pointer; font-size:0.9em; margin-top:0.5rem;">Alright</button>
                     </div>
                 </div>
             `;
@@ -2736,8 +2774,61 @@
 
             const confirmBtn = container.querySelector('.sc-confirm-btn');
             const denyBtn = container.querySelector('.sc-deny-btn');
+            const telemetryToggle = container.querySelector('#sc-telemetry-toggle');
+            const telemetryLabel = telemetryToggle?.nextElementSibling;
+            const whatsTelemetryBtn = container.querySelector('#sc-whats-telemetry');
+            const telemetryPopup = container.querySelector('#sc-telemetry-popup');
+            const telemetryPopupClose = container.querySelector('#sc-telemetry-popup-close');
+            const scrollBody = container.querySelector('.sc-body');
+
+            let hasScrolledSufficiently = false;
+
+            if (scrollBody && confirmBtn) {
+                const checkScroll = () => {
+                    if (hasScrolledSufficiently) return;
+                    const maxScroll = scrollBody.scrollHeight - scrollBody.clientHeight;
+                    if (maxScroll <= 10) {
+                        hasScrolledSufficiently = true;
+                        confirmBtn.disabled = false;
+                        confirmBtn.style.opacity = '1';
+                        confirmBtn.style.cursor = 'pointer';
+                        confirmBtn.textContent = 'Confirm';
+                        return;
+                    }
+
+                    const scrollPercentage = scrollBody.scrollTop / maxScroll;
+                    if (scrollPercentage >= 0.8) {
+                        hasScrolledSufficiently = true;
+                        confirmBtn.disabled = false;
+                        confirmBtn.style.opacity = '1';
+                        confirmBtn.style.cursor = 'pointer';
+                        confirmBtn.textContent = 'Confirm';
+                    }
+                };
+
+                scrollBody.addEventListener('scroll', checkScroll);
+                setTimeout(checkScroll, 100);
+            }
+
+            if (telemetryToggle && telemetryLabel) {
+                telemetryToggle.onclick = () => {
+                    telemetryToggle.classList.toggle('active');
+                    const isActive = telemetryToggle.classList.contains('active');
+                    telemetryLabel.textContent = isActive ? 'Enabled' : 'Disabled';
+                };
+            }
+
+            if (whatsTelemetryBtn && telemetryPopup) {
+                whatsTelemetryBtn.onclick = () => { telemetryPopup.style.display = 'flex'; };
+            }
+            if (telemetryPopupClose && telemetryPopup) {
+                telemetryPopupClose.onclick = () => { telemetryPopup.style.display = 'none'; };
+                telemetryPopup.onclick = (e) => { if (e.target === telemetryPopup) telemetryPopup.style.display = 'none'; };
+            }
 
             confirmBtn.onclick = () => {
+                const shareTelemetry = telemetryToggle ? telemetryToggle.classList.contains('active') : true;
+                localStorage.setItem('share-data', shareTelemetry ? 'true' : 'false');
                 _ls.set('bh-security-accepted', 'true');
                 container.classList.add('sc-closing');
                 setTimeout(() => {
@@ -3016,6 +3107,56 @@
             .sc-closing {
                 opacity: 0 !important;
                 transition: opacity 0.8s ease !important;
+            }
+            
+            .sc-switch-btn .slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: var(--bg-tertiary, rgba(255, 255, 255, 0.1));
+                transition: .4s cubic-bezier(0.68, -0.6, 0.32, 1.6);
+                border: 1px solid var(--border-light, rgba(255, 255, 255, 0.2));
+            }
+            
+            .sc-switch-btn .slider:before {
+                position: absolute;
+                content: "";
+                height: 16px;
+                width: 16px;
+                left: 3px;
+                bottom: 3px;
+                background-color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+                transition: .4s cubic-bezier(0.68, -0.6, 0.32, 1.6);
+            }
+            
+            .sc-switch-btn.active .slider {
+                background-color: var(--accent-primary, #ecb427ff);
+                border-color: var(--accent-primary, #e9b227ff);
+            }
+            
+            .sc-switch-btn.active .slider:before {
+                transform: translateX(20px);
+                background-color: white;
+            }
+            
+            .sc-switch-btn .slider.round {
+                border-radius: 24px;
+            }
+            
+            .sc-switch-btn .slider.round:before {
+                border-radius: 50%;
+            }
+            
+            .sc-no-scroll {
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            
+            .sc-no-scroll::-webkit-scrollbar {
+                display: none;
             }
         `;
         document.head.appendChild(style);
@@ -3855,7 +3996,7 @@
             } catch (e) { state.controlPanelStatus = 'down'; }
         }, 30000);
 
-        showToast('BananaBurner 2979 ready!', 'success');
+        //showToast('BananaBurner 2979 ready!', 'success');
     }
 
     function getHeaders() {
@@ -4382,7 +4523,14 @@
                                         const truncationNotice = '<span style="color: #64748b; font-style: italic; opacity: 0.7;">...Saved history truncated...</span>';
                                         state.controlPanel.websocket.logs = [truncationNotice, ...historyLines];
                                         if (document.querySelector('.console-body')) {
-                                            document.querySelector('.console-body').innerHTML = state.controlPanel.websocket.logs.map(line => `<div class="console-line notranslate">${line}</div>`).join('');
+                                            const cb = document.querySelector('.console-body');
+                                            cb.innerHTML = '';
+                                            state.controlPanel.websocket.logs.forEach(line => {
+                                                const el = document.createElement('div');
+                                                el.className = 'console-line notranslate';
+                                                el.innerHTML = line;
+                                                cb.appendChild(el);
+                                            });
                                         }
                                     }
                                 }
@@ -4806,12 +4954,18 @@
                 }
             });
 
+            const fontLink = pipWindow.document.createElement('link');
+            fontLink.rel = 'stylesheet';
+            fontLink.href = 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Inter:wght@400;600;700&family=Poppins:wght@400;600;700&display=swap';
+            pipWindow.document.head.appendChild(fontLink);
+
             const extraStyle = document.createElement('style');
             extraStyle.textContent = `
-        body { margin: 0; background: #000; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        body { margin: 0; background: #000; overflow: hidden; height: 100vh; display: flex; flex-direction: column; font-family: 'Poppins', 'Inter', system-ui, sans-serif; }
         .console-container { display: flex !important; flex-direction: column !important; position: relative !important; top: 0 !important; left: 0 !important; transform: none !important; width: 100% !important; height: 100vh !important; visibility: visible !important; opacity: 1 !important; border:none !important; overflow: hidden !important; }
-        .console-header { border-radius: 0 !important; flex-shrink: 0 !important; }
-        .console-body { flex: 1 !important; overflow-y: auto !important; height: 0 !important; min-height: 0 !important; }
+        .console-header { display: none !important; }
+        .console-body { flex: 1 !important; overflow-y: auto !important; height: 100vh !important; min-height: 100vh !important; background: #000 !important; padding: 1rem !important; }
+        .console-line { font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 0.85rem; line-height: 1.5; color: #e2e8f0; margin-bottom: 0.25rem; white-space: pre-wrap; word-break: break-all; }
         .console-input-container { display: none !important; }
         .pip-only { display: flex !important; }
         .main-only { display: none !important; }
@@ -4826,17 +4980,11 @@
                 return;
             }
 
-            const closeBtn = consoleContainer.querySelector('.console-close');
-            if (closeBtn) closeBtn.style.display = 'none';
+            const header = consoleContainer.querySelector('.console-header');
+            if (header) header.remove();
 
             const inputContainer = consoleContainer.querySelector('.console-input-container');
             if (inputContainer) inputContainer.remove();
-
-            const header = consoleContainer.querySelector('.console-header');
-            if (header) {
-                const title = header.querySelector('h4');
-                if (title) title.innerHTML = `<i class="fas fa-external-link-alt"></i> PiP Console`;
-            }
 
             pipWindow.document.body.appendChild(consoleContainer);
 
@@ -4845,7 +4993,7 @@
                 pipConsoleBody.innerHTML = '';
                 state.controlPanel.websocket.logs.forEach(log => {
                     const line = document.createElement('div');
-                    line.className = 'console-line';
+                    line.className = 'console-line notranslate';
                     line.innerHTML = log;
                     pipConsoleBody.appendChild(line);
                 });
@@ -4944,7 +5092,13 @@
             modal.classList.add('has-console');
             const consoleBody = modal.querySelector('.console-body');
             if (consoleBody && consoleBody.children.length === 0 && state.controlPanel.websocket.logs.length > 0) {
-                consoleBody.innerHTML = state.controlPanel.websocket.logs.map(log => `<div class="console-line notranslate">${log}</div>`).join('');
+                consoleBody.innerHTML = '';
+                state.controlPanel.websocket.logs.forEach(log => {
+                    const el = document.createElement('div');
+                    el.className = 'console-line notranslate';
+                    el.innerHTML = log;
+                    consoleBody.appendChild(el);
+                });
                 consoleBody.scrollTop = consoleBody.scrollHeight;
             }
         } else {
@@ -5476,7 +5630,7 @@
 
             const data = await response.json();
 
-            if (data.error || data.message === 'Must solve captcha.') {
+            if (data.error || data.message === 'Must solve captcha.' || data.success === false) {
                 return { success: false, error: data };
             } else {
                 return { success: true, data };
@@ -5636,7 +5790,7 @@
                     }
                     saveCoinProgress();
                     updateCoinCollectorUI();
-                    showToast(`Nice! +1 Coin via CAPTCHA! Total: ${state.coinCollector.coinsCollected}/${CONFIG.MAX_COINS_PER_DAY}`, 'coins');
+                    showToast(`+1 Coin Total: ${state.coinCollector.coinsCollected}/${CONFIG.MAX_COINS_PER_DAY}`, 'coins');
                     state.coinCollector.captchaClaimInProgress = false;
 
                     await fetchUserData(true);
@@ -5644,7 +5798,7 @@
                     if (state.coinCollector.coinsCollected >= CONFIG.MAX_COINS_PER_DAY) {
                         updateCoinCollectorUI();
                         SoundManager.playAllCoinsClaimed();
-                        showToast(`All done! Got ${state.coinCollector.coinsCollected} coins today!`, 'success');
+                        showToast(`All done! Got all coins today!`, 'success');
                         sendOSNotification('allCoins', 'BananaBurner', 'All coins collected for today!');
                         stopCoinCollector();
                         return;
@@ -5652,14 +5806,23 @@
 
                     setTimeout(attemptCoinCollection, CONFIG.NORMAL_COIN_INTERVAL);
                 } else {
-                    if (result.error && result.error.message && result.error.message.includes('ratelimited')) {
+                    const error = result.error || {};
+                    if (error.message && error.message.includes('ratelimited')) {
                         showToast('Going too fast! Waiting 10 seconds', 'warn');
                         setTimeout(attemptCoinCollection, 10000);
+                        state.coinCollector.captchaClaimInProgress = false;
+                    } else if (error.coinsClaimed === 10) {
+                        state.coinCollector.coinsCollected = error.coinsClaimed || 10;
+                        updateCoinCollectorUI();
+                        SoundManager.playAllCoinsClaimed();
+                        showToast(`Max coins reached! ${state.coinCollector.coinsCollected}/10 today`, 'success');
+                        stopCoinCollector();
+                        state.coinCollector.captchaClaimInProgress = false;
                     } else {
-                        showToast('Failed to claim coin', 'error');
+                        showToast('CAPTCHA verification failed. Retrying..', 'error');
+                        state.coinCollector.captchaClaimInProgress = false;
                         setTimeout(attemptCoinCollection, CONFIG.NORMAL_COIN_INTERVAL);
                     }
-                    state.coinCollector.captchaClaimInProgress = false;
                 }
             });
         }, 2500);
@@ -5711,7 +5874,7 @@
 
         if (state.coinCollector.coinsCollected >= CONFIG.MAX_COINS_PER_DAY) {
             SoundManager.playAllCoinsClaimed();
-            showToast(`All done! Got ${state.coinCollector.coinsCollected} coins today!`, 'success');
+            showToast(`All done! Got all coins today!`, 'success');
             stopCoinCollector();
             return;
         }
@@ -5755,15 +5918,22 @@
             if (state.coinCollector.coinsCollected >= CONFIG.MAX_COINS_PER_DAY) {
                 updateCoinCollectorUI();
                 SoundManager.playAllCoinsClaimed();
-                showToast(`All done! Got ${state.coinCollector.coinsCollected} coins today!`, 'success');
+                showToast(`All done! Got all coins today!`, 'success');
                 stopCoinCollector();
                 return;
             }
 
             setTimeout(attemptCoinCollection, CONFIG.NORMAL_COIN_INTERVAL);
         } else {
-            if (result.error && result.error.message && result.error.message.includes('Must solve captcha.')) {
+            const error = result.error || {};
+            if (error.message && error.message.includes('Must solve captcha.')) {
                 handleCaptchaError();
+            } else if (error.coinsClaimed === 10) {
+                state.coinCollector.coinsCollected = error.coinsClaimed || 10;
+                updateCoinCollectorUI();
+                SoundManager.playAllCoinsClaimed();
+                showToast(`Max coins reached!`, 'success');
+                stopCoinCollector();
             } else {
                 setTimeout(attemptCoinCollection, CONFIG.NORMAL_COIN_INTERVAL);
             }
@@ -5793,14 +5963,14 @@
             state.coinCollector.initialLoadComplete = true;
             setTimeout(attemptCoinCollection, CONFIG.NORMAL_COIN_INTERVAL);
         } else {
-            const error = result.error;
+            const error = result.error || {};
             if (error.message && error.message.includes('Must solve captcha.')) {
                 handleCaptchaError();
-            } else if (error.message && (error.message.includes('already claimed') || error.message.includes('limit') || error.message.includes('daily'))) {
-                state.coinCollector.coinsCollected = 10;
+            } else if (error.coinsClaimed === 10) {
+                state.coinCollector.coinsCollected = error.coinsClaimed || 10;
                 updateCoinCollectorUI();
                 SoundManager.playAllCoinsClaimed();
-                showToast(`Max coins reached! ${state.coinCollector.coinsCollected}/10 today`, 'success');
+                showToast(`Max coins reached!`, 'success');
                 //sendOSNotification('allCoins', 'BananaBurner', 'All coins collected for today!');
                 stopCoinCollector();
             } else {
@@ -6049,9 +6219,27 @@
         return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     }
 
-    function navigateTo(view) {
-        SoundManager.playButtonClick();
+    const VIEW_TO_PATH = {
+        'dashboard': '/panel/',
+        'coins': '/panel/earn',
+        'servers': '/panel/create',
+        'manage': '/panel/manage',
+        'market': '/panel/market',
+        'wiki': '/panel/wiki',
+        'uptime': '/panel/status'
+    };
+
+    function navigateTo(view, pushState = true) {
+        if (typeof SoundManager !== 'undefined') SoundManager.playButtonClick();
         if (state.currentView === view) return;
+
+        if (pushState && VIEW_TO_PATH[view]) {
+            const currentPath = window.location.pathname;
+            const newPath = VIEW_TO_PATH[view];
+            if (currentPath !== newPath) {
+                history.pushState({ view }, '', newPath);
+            }
+        }
 
         const content = document.getElementById('bh-main-content');
         if (content) {
@@ -6075,6 +6263,20 @@
         const targetItem = document.querySelector(`[data-view="${view}"]`);
         if (targetItem) {
             targetItem.classList.add('active');
+        }
+    }
+
+    window.addEventListener('popstate', (e) => {
+        const path = window.location.pathname;
+        const view = Object.entries(VIEW_TO_PATH).find(([v, p]) => p === path)?.[0] || 'dashboard';
+        navigateTo(view, false);
+    });
+
+    function handleInitialRouting() {
+        const path = window.location.pathname;
+        const view = Object.entries(VIEW_TO_PATH).find(([v, p]) => p === path)?.[0] || 'dashboard';
+        if (view !== 'dashboard') {
+            state.currentView = view;
         }
     }
 
@@ -7452,16 +7654,7 @@
                 </label>
               </div>
 
-              <div class="setting-item" style="display: none;">
-                <div class="setting-info">
-                  <div style="font-weight: 600; color: var(--text-primary);"><i class="fas fa-network-wired" style="margin-right: 0.5rem;"></i>Disable QUIC</div>
-                  <div style="font-size: 0.8em; color: var(--text-secondary);">Force HTTP/2 (Experimental)</div>
-                </div>
-                <label class="switch">
-                    <input type="checkbox" id="settings-quic-disabled" ${localStorage.getItem('bh-quic-disabled') === 'true' ? 'checked' : ''}>
-                    <span class="slider round"></span>
-                </label>
-              </div>
+
 
               <div class="setting-item">
                 <div class="setting-info">
@@ -7564,7 +7757,7 @@
             <div class="webhooks-content" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
               <div class="webhooks-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); padding-bottom: 1rem;">
                 <h3 style="margin: 0; font-size: 1.1em; display: flex; align-items: center; gap: 0.5rem;"><i class="fas fa-link"></i> Webhooks:</h3>
-                <button class="btn btn-primary btn-sm" id="create-webhook-btn" style="margin-left: 0.75rem; width: max-content; padding: 0.5rem 1rem;">
+                <button class="btn btn-primary btn-sm" id="create-webhook-btn" style="margin-left: auto; flex: none !important; width: fit-content !important; padding: 0.5rem 1rem; font-weight: 600;">
                   <i class="fas fa-plus"></i> <span class="mobile-hide">Create Webhook</span>
                 </button>
               </div>
@@ -7957,17 +8150,7 @@
             };
         }
 
-        const quicDisabledEl = modal.querySelector('#settings-quic-disabled');
-        if (quicDisabledEl) {
-            quicDisabledEl.onchange = (e) => {
-                const disabled = e.target.checked;
-                localStorage.setItem('bh-quic-disabled', disabled);
-                if (chrome.runtime && chrome.runtime.sendMessage) {
-                    chrome.runtime.sendMessage({ action: 'setQuicDisabled', disabled });
-                }
-                showToast(`QUIC Protocol ${e.target.checked ? 'disabled' : 'enabled'} (Requires reload)`, 'info');
-            };
-        }
+
 
         const vfsEnabledEl = modal.querySelector('#settings-vfs-enabled');
         const vfsAlwaysSearchContainer = modal.querySelector('#vfs-always-search-container');
@@ -8392,10 +8575,13 @@
             if (main) {
                 const icon = main.querySelector('i');
                 const label = main.querySelector('span');
-                if (icon) icon.className = 'fas fa-spinner fa-spin';
+                if (icon) {
+                    icon.className = 'fas fa-spinner fa-spin';
+                    icon.style.setProperty('font-size', '1.35em', 'important');
+                }
                 if (label) label.textContent = 'Wait...';
             } else {
-                clickedBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+                clickedBtn.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size: 1.35em !important;"></i> Loading...';
             }
         }
 
@@ -8792,7 +8978,7 @@
           <div class="server-details-grid">
             <div class="detail-card" oncontextmenu="window.showDetailCardContextMenu(event, 'Server ID', '${modalId}')">
               <div class="detail-icon">
-                <i class="fas fa-id-card"></i>
+                <i class="fas fa-id-card" style="font-size: 1.5rem !important;"></i>
               </div>
               <div class="detail-info">
                 <label>Server ID</label>
@@ -8802,7 +8988,7 @@
             
             <div class="detail-card" oncontextmenu="window.showDetailCardContextMenu(event, 'Node', '${escapeHTML((state.controlPanel.servers.find(s => s.attributes?.node === details.node || s.attributes?.identifier === details.identifier)?.attributes?.node || details.node || server?.node || '-').toUpperCase())}')">
               <div class="detail-icon">
-                <i class="fas fa-network-wired"></i>
+                <i class="fas fa-network-wired" style="font-size: 1.8rem !important;"></i>
               </div>
               <div class="detail-info notranslate">
                 <label>Node</label>
@@ -8906,7 +9092,7 @@
           </button>
 
           <button class="btn btn-primary" style="flex: 1; min-width: 0; padding: 0.75rem 0.5rem; font-size: 0.85rem;" ${!details.identifier ? 'disabled' : ''}>
-            <i class="fas fa-external-link-alt"></i>
+            <i class="fas fa-external-link-alt" style="font-size: 1em !important;"></i>
             <span class="btn-text"><span class="mobile-hide">Control </span>Panel</span>
           </button>
         </div>
@@ -11947,40 +12133,64 @@
     window.deleteFile = deleteFile;
 
 
-    function loadScript(src) {
+    function loadScript(src, integrity) {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = src;
+            if (integrity) { script.integrity = integrity; script.crossOrigin = 'anonymous'; }
             script.onload = resolve;
             script.onerror = reject;
             document.head.appendChild(script);
         });
     }
 
-    function loadStyle(href) {
+    function loadStyle(href, integrity) {
         return new Promise((resolve, reject) => {
             const link = document.createElement('link');
             link.rel = 'stylesheet';
             link.href = href;
+            if (integrity) { link.integrity = integrity; link.crossOrigin = 'anonymous'; }
             link.onload = resolve;
             link.onerror = reject;
             document.head.appendChild(link);
         });
     }
-
+    //
     async function loadLightweightEditor() {
         if (window.CodeJar) return true;
         try {
             await Promise.all([
-                loadScript('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js'),
-                loadStyle('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css'),
-                loadScript('https://cdn.jsdelivr.net/npm/codejar@2.0.0/dist/codejar.min.js')
+                loadScript('https://cdnjs.cloudflare.com/ajax/libs/prism/9000.0.1/prism.min.js', 'sha512-UOoJElONeUNzQbbKQbjldDf9MwOHqxNz49NNJJ1d90yp+X9edsHyJoAs6O4K19CZGaIdjI5ohK+O2y5lBTW6uQ=='),
+                loadStyle('https://cdnjs.cloudflare.com/ajax/libs/prism-themes/1.9.0/prism-atom-dark.min.css', 'sha512-GZPS1oCebjx8g/ZkrTTvWirW+4wDkzIsilUQPXcZzuDpDzoH5brM2AojiFjo6ObIWeM68ZDostvdjaS9MNYCTg=='),
+                loadStyle('https://cdnjs.cloudflare.com/ajax/libs/prism-themes/1.9.0/prism-material-light.min.css', 'sha512-O5jY0oTgD2Elx8HWIERZc4ZpMfpXeTdmz03FfAWoieGoa940jVMFC4sm183QCcvHlQTmTgoV5im5KFPwj4B5xg=='),
+                (async () => {
+                    const res = await fetch('https://cdn.jsdelivr.net/npm/codejar@4.3.0/dist/codejar.js');
+                    if (!res.ok) throw new Error('CodeJar fetch failed: ' + res.status);
+                    const src = await res.text();
+                    const script = document.createElement('script');
+                    script.textContent = '(function(){' + src.replace(/^export\s+/gm, '') + '\nwindow.CodeJar=CodeJar;\n})();';
+                    document.head.appendChild(script);
+                    if (!window.CodeJar) throw new Error('CodeJar ƒailed to initialize');
+                })()
             ]);
+            document.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+                if (link.href.includes('prism-atom-dark')) link.id = 'prism-theme-dark';
+                if (link.href.includes('prism-material-light')) link.id = 'prism-theme-light';
+            });
+            applyPrismTheme();
             return true;
         } catch (e) {
             BnLog('ERROR', 'Failed to load CodeJar:', e);
             return false;
         }
+    }
+
+    function applyPrismTheme() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const darkSheet = document.getElementById('prism-theme-dark');
+        const lightSheet = document.getElementById('prism-theme-light');
+        if (darkSheet) darkSheet.disabled = !isDark;
+        if (lightSheet) lightSheet.disabled = isDark;
     }
 
     let monacoLoaded = false;
@@ -11990,16 +12200,58 @@
 
         try {
             await new Promise((resolve, reject) => {
+                const peDefine = window.define;
+                const peRequire = window.require;
+
+                if (peDefine && peDefine.amd && !peDefine.monaco) {
+                    window.define = undefined;
+                }
+                if (peRequire && typeof peRequire.config !== 'function') {
+                    window.require = undefined;
+                }
+
                 const loaderScript = document.createElement('script');
-                loaderScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js';
+                loaderScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.53.0/min/vs/loader.min.js';
+                loaderScript.integrity = 'sha512-ZG31AN9z/CQD1YDDAK4RUAvogwbJHv6bHrumrnMLzdCrVu4HeAqrUX7Jsal/cbUwXGfaMUNmQU04tQ8XXl5Znw==';
+                loaderScript.crossOrigin = 'anonymous';
+                loaderScript.referrerPolicy = 'no-referrer';
+
                 loaderScript.onload = () => {
-                    window.require.config({
-                        paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }
-                    });
-                    window.require(['vs/editor/editor.main'], () => {
-                        monacoLoaded = true;
-                        resolve();
-                    });
+                    const monacoRequire = window.require;
+
+                    const configMonaco = () => {
+                        if (monacoRequire && typeof monacoRequire.config === 'function') {
+                            monacoRequire.config({
+                                paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.53.0/min/vs' }
+                            });
+                            monacoRequire(['vs/editor/editor.main'], () => {
+                                if (peDefine && !window.define?.monaco) window.define = peDefine;
+                                if (peRequire && !window.require?.config) window.require = peRequire;
+
+                                monacoLoaded = true;
+                                resolve();
+                            });
+                        } else {
+                            reject(new Error('Monaco loader not found after initialization'));
+                        }
+                    };
+
+                    setTimeout(() => {
+                        if (window.require && typeof window.require.config === 'function') {
+                            configMonaco();
+                        } else {
+                            let attempts = 0;
+                            const checkLoader = setInterval(() => {
+                                if (window.require && typeof window.require.config === 'function') {
+                                    clearInterval(checkLoader);
+                                    configMonaco();
+                                } else if (attempts++ > 40) {
+                                    clearInterval(checkLoader);
+                                    reject(new Error('Monaco loader failed to initialize within timeout'));
+                                }
+                            }, 50);
+                        }
+                    }, 0);
                 };
                 loaderScript.onerror = reject;
                 document.head.appendChild(loaderScript);
@@ -12039,6 +12291,19 @@
         const modal = document.createElement('div');
         modal.id = 'bh-file-editor-modal';
         modal.className = 'file-editor-modal';
+        const savedTheme = localStorage.getItem('banana-theme') || 'system';
+        const docTheme = document.documentElement.getAttribute('data-theme');
+        const currentTheme = (docTheme && docTheme !== 'system')
+            ? docTheme
+            : (savedTheme === 'system'
+                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                : savedTheme);
+        const isDark = currentTheme === 'dark';
+
+        modal.style.setProperty('--modal-bg-primary', isDark ? '#1e293b' : '#ffffff');
+        modal.style.setProperty('--modal-text-primary', isDark ? '#ffffff' : '#1e293b');
+        modal.style.setProperty('--modal-text-secondary', isDark ? '#e2e8f0' : '#64748b');
+        modal.style.setProperty('--modal-tertiary-bg', isDark ? '#334155' : '#f8fafc');
         modal.innerHTML = `
       <div class="modal-overlay"></div>
       <div class="file-editor-container">
@@ -12052,11 +12317,11 @@
               <i class="fas fa-save"></i> Save
             </button>
             <button class="file-editor-close">
-              <i class="fas fa-times"></i>
+              <i class="fas fa-times" style="font-size: 2.1rem !important;"></i>
             </button>
           </div>
         </div>
-        <div class="file-editor-progress-container" style="height: 2px; width: 100%; background: rgba(255,255,255,0.05); overflow: hidden;">
+        <div class="file-editor-progress-container" style="height: 2px; width: 100%; background: ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'}; overflow: hidden;">
             <div class="file-editor-progress-bar" style="height: 100%; width: 0%; background: var(--accent-primary); transition: width 0.2s ease;"></div>
         </div>
         <div class="file-editor-body">
@@ -12145,8 +12410,11 @@
       `;
             document.getElementById('file-editor-textarea').oninput = checkChanges;
         } else if (useLightweight) {
+            const editorBg = isDark ? '#1d1f21' : '#fafafa';
+            const editorFg = isDark ? '#c5c8c6' : '#263238';
+            applyPrismTheme();
             modal.querySelector('.file-editor-body').innerHTML = `
-        <div id="code-jar-container" class="code-jar-editor" style="width: 100%; height: 100%; overflow: auto; background: #1e1e1e; color: #d4d4d4; padding: 1rem; font-family: 'Consolas', 'Monaco', monospace; font-size: 14px; line-height: 1.5; outline: none;" contenteditable="true"></div>
+        <div id="code-jar-container" class="code-jar-editor" style="width: 100%; height: 100%; overflow: auto; background: ${editorBg}; color: ${editorFg}; padding: 1rem; font-family: 'Consolas', 'Monaco', monospace; font-size: 14px; line-height: 1.5; outline: none;" contenteditable="true"></div>
       `;
             const editorEl = document.getElementById('code-jar-container');
             const jar = CodeJar(editorEl, (editor) => {
@@ -12164,7 +12432,7 @@
             editorView = monaco.editor.create(document.getElementById('monaco-editor-container'), {
                 value: content,
                 language: getMonacoLanguage(fileName),
-                theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'vs-dark' : 'vs',
+                theme: isDark ? 'vs-dark' : 'vs',
                 automaticLayout: true,
                 minimap: { enabled: false },
                 fontSize: 14,
@@ -15170,10 +15438,29 @@ ignite();
                 settings: (() => {
                     const sSettings = { ...state.settings };
                     delete sSettings.customTheme;
+                    if (sSettings.quickActions) {
+                        sSettings.quickActions = sSettings.quickActions.map(a => {
+                            if (a.type === 'server') {
+                                return { ...a, identifier: '[REDACTED]', serverId: '[REDACTED]', label: '[REDACTED SERVER]' };
+                            }
+                            if (a.type === 'url') {
+                                return { type: 'url', id: a.id, color: a.color, label: 'URL QUICK ACTION', icon: '[REDACTED]', url: '[REDACTED]' };
+                            }
+                            return a;
+                        });
+                    }
                     return sSettings;
                 })(),
                 themeName: state.settings.themeName || 'Default',
-                version: CONFIG.SCRIPT_VERSION
+                version: CONFIG.SCRIPT_VERSION,
+                debug: {
+                    engine: navigator.userAgent.includes('Firefox') ? 'gecko' : (navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome')) ? 'webkit' : 'chromium',
+                    screen: `${screen.width}x${screen.height}`,
+                    pluginErrors: Object.values(state.plugins.loaded).filter(p => p.error).length,
+                    activePlugins: state.plugins.activePlugins?.length || 0,
+                    devMode: state.devMode || false,
+                    osrc: localStorage.getItem('OSRC') === 'true'
+                }
             };
 
             await fetch(CONFIG.TELEMETRY, {
@@ -15950,7 +16237,7 @@ ignite();
             return `
               <div class="activity-item" data-activity-id="${transaction.date}" ${animate ? 'style="animation: fadeIn 0.3s ease-out"' : ''} oncontextmenu="window.showActivityItemContextMenu(event, '${transaction.text.replace(/'/g, "\\'")}', '${transaction.date}')">
                 <div class="activity-icon ${isDeduction ? 'deduction' : 'addition'}">
-                  <i class="fas ${iconClass}"></i>
+                  <i class="fas ${iconClass}" style="font-size: 2.5em !important;"></i>
                 </div>
                 <div class="activity-content">
                   <span class="activity-text">${escapeHTML(transaction.text)}</span>
@@ -16080,7 +16367,7 @@ ignite();
              <div id="bh-ad-fallback" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; padding: 1.5rem; background: var(--modal-tertiary-bg); border-radius: 12px; border: 1px dashed var(--border-light); text-align: center;">
                 <p style="margin: 0; font-size: 0.9em; color: var(--text-secondary); font-weight: 500;">Promote your Discord Bot or Server!</p>
                 <a href="https://advertise.bot-hosting.net/" target="_blank" class="btn btn-sm btn-primary" style="text-decoration: none; display: flex; align-items: center; gap: 0.5rem; font-weight: 600; width: fit-content; flex: none !important;">
-                    <i class="fas fa-external-link-alt"></i>
+                    <i class="fas fa-external-link-alt" style="font-size: 1em !important;"></i>
                     <span>Advertise here</span>
                 </a>
              </div>
@@ -16309,7 +16596,7 @@ ignite();
                 </div>
                 <div class="server-actions">
                   <button class="btn btn-outline" onclick="showServerDetails('${escapeHTML(server.serverid)}', false, event)">
-                    <i class="fas fa-info-circle"></i> Details
+                    <i class="fas fa-info-circle" style="font-size: 1.35em !important;"></i> Details
                   </button>
                 </div>
               </div>
@@ -16358,7 +16645,7 @@ ignite();
                         </div>
                         <div class="server-actions">
                           <button class="btn btn-outline" ${isSuspended ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''} onclick="showServerDetails('${escapeHTML(identifier)}', false, event)">
-                            <i class="fas fa-info-circle"></i> Details
+                            <i class="fas fa-info-circle" style="font-size: 1.35em !important;"></i> Details
                           </button>
                         </div>
                       </div>
@@ -16409,9 +16696,9 @@ ignite();
         return `
       <div class="module-card">
         <div class="module-header">
-          <div class="module-title">
+          <div class="module-title" style="display: flex; align-items: center; gap: 0.8rem;">
             <i class="fas fa-book"></i>
-            <h2>Wiki & Help</h2>
+            <h2 style="margin: 0;">Wiki & Help</h2>
           </div>
         </div>
         <div class="module-body">
@@ -16436,6 +16723,7 @@ ignite();
     }
     //
     function init() {
+        handleInitialRouting();
         const osrc = localStorage.getItem('OSRC') === 'true';
         if (osrc) {
             window.addEventListener('contextmenu', (e) => {
@@ -16522,7 +16810,7 @@ ignite();
             </div>
             
             <nav class="bh-nav">
-              <button class="nav-item active" data-view="dashboard">
+              <button class="nav-item" data-view="dashboard">
                 ${renderIcon('dashboard', '24px', 'reveal')}
                 <span>Dashboard</span>
               </button>
@@ -16580,7 +16868,6 @@ ignite();
         
         <main class="bh-main">
           <div id="bh-main-content" class="main-content">
-            ${renderDashboard(true)}
           </div>
           ${renderFooter()}
         </main>
@@ -16594,10 +16881,15 @@ ignite();
         updateSoundToggle();
 
         document.querySelectorAll('.nav-item').forEach(item => {
+            if (item.dataset.view === state.currentView) {
+                item.classList.add('active');
+            }
             item.addEventListener('click', (e) => {
                 navigateTo(e.currentTarget.dataset.view);
             });
         });
+
+        updateMainContent(true);
 
         applyThemeBackground();
         updateThemeTitle();
@@ -16694,6 +16986,30 @@ ignite();
         border-bottom-color: var(--accent-primary) !important;
       }
 
+
+            i.fas, i.far, i.fab, i.fa-solid, i.fa-regular, i.fa-brands {
+        display: inline-flex;
+        align-items: center !important;
+        justify-content: center !important;
+        width: auto !important;
+        min-width: 1.25em;
+        vertical-align: middle !important;
+        font-style: normal !important;
+        letter-spacing: 0 !important;
+        word-spacing: 0 !important;
+        text-indent: 0 !important;
+        text-transform: none !important;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      i.fa-times, i.fa-xmark, i.fa-check, i.fa-check-circle {
+        font-size: 1.3em !important;
+      }
+
+      .bh-toast i {
+        font-size: 1.5em !important;
+      }
 
       .stats-grid {
         display: grid;
@@ -17349,7 +17665,7 @@ ignite();
       }
 
       [data-theme="light"] .console-input {
-        color: #1e293b;
+        color: #e2e8f0 !important;
       }
 
       .status-badge {
@@ -17514,6 +17830,7 @@ ignite();
     gap: 0.75rem;
     flex-shrink: 0;
 }
+
 
       .sound-toggle {
     width: 36px;
@@ -18657,12 +18974,19 @@ input[type="range"]::-moz-range-thumb {
     transform:translate(-50%, -50%) scale(0.9);
     width: 90%;
     max-width: 500px;
-    max-height: 90vh;
+    max-height: 94vh;
     overflow:visible;
     display:flex;
     flex-direction:column;
     transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), left 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     z-index: 200;
+}
+
+@media (max-width: 600px) {
+    .modal-container {
+        max-height: 85vh;
+        width: 95%;
+    }
 }
 
 .modal-bg-layer {
@@ -18683,7 +19007,9 @@ input[type="range"]::-moz-range-thumb {
     display: flex;
     flex-direction: column;
     height: 100%;
-    max-height: 90vh;
+    max-height: 90%;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
       .bananaa-modal.visible.modal-container {
@@ -18761,7 +19087,11 @@ height: 0;
     bottom: 0;
     background-color:var(--bg-tertiary);
     transition: .4s cubic-bezier(0.68, -0.6, 0.32, 1.6);
-    border: 1px solid var(--border-light);
+    border: 1px solid var(--border-light, rgba(255, 255, 255, 0.2));
+}
+
+      [data-theme="dark"] .slider {
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
 }
 
       .slider:before {
@@ -18907,6 +19237,7 @@ input:checked + .slider:before {
 
       .profile-modal-container {
     max-width: 520px;
+    overflow: hidden;
 }
 
       .profile-tabs {
@@ -18953,6 +19284,8 @@ input:checked + .slider:before {
 
       .profile-modal-body {
     min-height: 300px;
+    flex: 1;
+    overflow-y: auto;
 }
 
       .affiliate-loading,
@@ -19538,7 +19871,7 @@ input:checked + .slider:before {
         transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), left 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
     .bananaa-modal.has-console.panel-active .console-container {
-        transform: translate(calc(-50% - 480px), -50%) scale(1) !important;
+        transform: translate(calc(-50% - 478.5px), -50%) scale(1) !important;
         transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), left 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
 }
@@ -19555,7 +19888,8 @@ input:checked + .slider:before {
     width: auto;
     min-width: 44px;
     height: 44px;
-    padding: 0 14px;
+    padding: 0 14px 0 20px;
+    margin-left: -6px;
     background: var(--modal-bg-primary, var(--bg-secondary));
     border: 1px solid var(--border-light);
     border-left: none;
@@ -19567,15 +19901,20 @@ input:checked + .slider:before {
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     color: var(--text-secondary);
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 600;
     white-space: nowrap;
     box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .pullout-flag i {
-    font-size: 1rem;
+    display: flex;
+    width: 25px;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
     flex-shrink: 0;
+    margin: 0;
 }
 
 .pullout-flag .flag-label {
@@ -20657,6 +20996,15 @@ input[type="number"].modern-input {
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s ease;
+    --modal-bg-primary: #ffffff;
+    --modal-text-primary: #1e293b;
+    --modal-text-secondary: #64748b;
+}
+
+[data-theme="dark"] .file-editor-modal {
+    --modal-bg-primary: #1e293b;
+    --modal-text-primary: #ffffff;
+    --modal-text-secondary: #e2e8f0;
 }
 
 .file-editor-modal.visible {
@@ -20742,7 +21090,7 @@ input[type="number"].modern-input {
 }
 
 .file-editor-close {
-    background: rgba(255,255,255,0.1);
+    background: var(--modal-tertiary-bg, rgba(255,255,255,0.1));
     color: var(--text-primary);
 }
 
@@ -20758,22 +21106,23 @@ input[type="number"].modern-input {
     min-height: 0;
 }
 
-.file-editor-body .CodeMirror {
+.file-editor-body {
     height: 100% !important;
     font-family: 'Consolas', 'Monaco', 'Fira Code', monospace;
     font-size: 14px;
+    background: var(--modal-bg-primary);
 }
 
 .file-editor-textarea {
     width: 100%;
     height: 100%;
-    background: #1e1e1e;
-    color: #d4d4d4;
+    background: var(--modal-bg-primary);
+    color: var(--modal-text-primary);
     border: none;
-    padding: 1rem;
-    font-family: 'Consolas', 'Monaco', 'Fira Code', monospace;
-    font-size: 14px;
-    line-height: 1.5;
+    padding: 1.5rem;
+     font-family: 'Consolas', 'Monaco', 'Fira Code', monospace;
+    font-size: 0.95rem;
+    line-height: 1.6;
     resize: none;
     outline: none;
 }
@@ -21373,6 +21722,14 @@ input[type="number"].modern-input {
     opacity: 0;
     visibility: hidden;
     transition: all 0.3s ease;
+    --modal-bg-primary: #ffffff;
+    --modal-text-primary: #1e293b;
+    --modal-text-secondary: #64748b;
+}
+[data-theme="dark"] .file-editor-modal {
+    --modal-bg-primary: #1e293b;
+    --modal-text-primary: #ffffff;
+    --modal-text-secondary: #e2e8f0;
 }
 
 .file-editor-modal.visible {
@@ -21456,7 +21813,7 @@ input[type="number"].modern-input {
 }
 
 .file-editor-close {
-    background: rgba(255,255,255,0.1);
+    background: var(--modal-tertiary-bg, rgba(255,255,255,0.1));
     color: var(--text-primary);
 }
 
@@ -21469,14 +21826,14 @@ input[type="number"].modern-input {
     flex: 1;
     overflow: hidden;
     position: relative;
-    background: #1e1e1e;
+    background: var(--modal-bg-primary);
 }
 
 .file-editor-textarea {
     width: 100%;
     height: 100%;
-    background: #1e1e1e;
-    color: #d4d4d4;
+    background: var(--modal-bg-primary);
+    color: var(--modal-text-primary);
     border: none;
     padding: 1rem;
     font-family: 'Consolas', 'Monaco', 'Fira Code', monospace;
@@ -23068,24 +23425,24 @@ input[type="checkbox"].file-select-cb,
                         </button>
                     </div>
                     <div style="padding: 2rem; background: var(--bg-secondary); border-top: 1px solid var(--border-light);">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <h2 class="notranslate" style="margin: 0 0 0.5rem 0;">${sName}</h2>
-                                <p class="notranslate" style="margin: 0 0 1rem 0; color: var(--text-secondary);">Version ${sVersion} | Author: ${sAuthor}</p>
-                                <div class="preview-description" style="color: var(--text-primary); opacity: 0.8; line-height: 1.6; font-size: 0.95rem; background: var(--bg-primary); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-light); margin-top: 1rem;">
-                                    ${sDescription}
-                                </div>
-                            </div>
-                            <div style="text-align: right;">
-                                <span style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;"><i class="fas fa-download"></i> ${sDownloads} downloads</span>
-                                <button class="btn ${prevBtnClass}"
-                                        onclick="window.installModule('${item.id}', '${type}')"
-                                        onmouseover="if(!this.disabled) { this.style.filter='brightness(1.1)'; this.style.transform='translateY(-2px)'; }"
-                                        onmouseout="if(!this.disabled) { this.style.filter='none'; this.style.transform='none'; }"
-                                        style="min-width: 160px; padding: 0.8rem 1.5rem; transition: all 0.2s ease;"
-                                        ${prevBtnDisabled ? 'disabled' : ''}>
-                                    ${prevBtnText}
-                                </button>
+                        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; flex-wrap: wrap;">
+                                <div style="flex: 1; min-width: 280px;">
+                                    <h2 class="notranslate" style="margin: 0 0 0.5rem 0; font-size: 1.8rem;">${sName}</h2>
+                                    <p class="notranslate" style="margin: 0; color: var(--text-secondary); font-size: 0.9rem;">Version ${sVersion} | Author: ${sAuthor}</p>
+                                     <div class="preview-actions" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; width: 100%; margin-top: 0.5rem;">
+                                         <span style="font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap;"><i class="fas fa-download"></i> ${sDownloads} downloads</span>
+                                         <button class="btn ${prevBtnClass}"
+                                                 onclick="window.installModule('${item.id}', '${type}')"
+                                                 onmouseover="if(!this.disabled) { this.style.filter='brightness(1.1)'; this.style.transform='translateY(-2px)'; }"
+                                                 onmouseout="if(!this.disabled) { this.style.filter='none'; this.style.transform='none'; }"
+                                                 style="padding: 0.8rem 1.5rem; transition: all 0.2s ease; width: fit-content !important; flex: none !important;"
+                                                 ${prevBtnDisabled ? 'disabled' : ''}>
+                                             ${prevBtnText}
+                                         </button>
+                                     </div>
+                             </div>
+                             <div class="preview-description" style="color: var(--text-primary); opacity: 0.9; line-height: 1.65; font-size: 1rem; background: var(--bg-primary); padding: 1.25rem; border-radius: 12px; border: 1px solid var(--border-light); width: 100%; white-space: pre-wrap; word-break: break-word;">${sDescription}</div>
                             </div>
                         </div>
                     </div>
@@ -23747,4 +24104,4 @@ input[type="checkbox"].file-select-cb,
 // Termux Labs 2026 - @agentzzrp (relentiousdragon), @paccman_0 on Discord
 // Shoutout to every early adopter, everyone who suggested, reported a bug, or gave feedback!
 // If you're confused by a function or something, send me a DM on Discord @agentzzrp, if i'm unavailable, dm @paccman_0 instead but only for plugin framework related stuff.
-/////////////////////
+//////////////////////
