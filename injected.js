@@ -15441,12 +15441,12 @@ ignite();
                     if (sSettings.quickActions) {
                         sSettings.quickActions = sSettings.quickActions.map(a => {
                             if (a.type === 'server') {
-                                return { ...a, identifier: '[REDACTED]', serverId: '[REDACTED]', label: '[REDACTED SERVER]' };
+                                return { ...a, id: '[REDACTED]', identifier: '[REDACTED]', serverId: '[REDACTED]', label: '[REDACTED SERVER]' };
                             }
                             if (a.type === 'url') {
-                                return { type: 'url', id: a.id, color: a.color, label: 'URL QUICK ACTION', icon: '[REDACTED]', url: '[REDACTED]' };
+                                return { type: 'url', id: '[REDACTED]', color: a.color, label: 'URL QUICK ACTION', icon: '[REDACTED]', url: '[REDACTED]' };
                             }
-                            return a;
+                            return { ...a, id: '[REDACTED]' };
                         });
                     }
                     return sSettings;
