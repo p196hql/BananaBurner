@@ -1,7 +1,7 @@
 class ContentScript {
   constructor() {
     const existingNonce = document.documentElement.getAttribute('data-bh-bridge-nonce');
-    this.bridgeNonce = existingNonce || (Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15));
+    this.bridgeNonce = existingNonce || Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
 
     if (!existingNonce) {
       document.documentElement.setAttribute('data-bh-bridge-nonce', this.bridgeNonce);
@@ -350,4 +350,4 @@ if (document.readyState === 'loading') {
 } else {
   new ContentScript();
 }
-//////////////
+///////////////
