@@ -1,5 +1,7 @@
 const UPDATE_ALARM_NAME = 'scriptUpdateCheck';
 const activeWebSockets = new Map();
+const notificationTabMap = new Map();
+const NOTIFICATION_TTL = 10 * 60 * 1000;
 //
 class ScriptManager {
     constructor() {
@@ -19,7 +21,7 @@ class ScriptManager {
             await chrome.alarms.create(UPDATE_ALARM_NAME, {
                 periodInMinutes: 60
             });
-            console.log('[BananaBurner] Update alarm scheduled (every 60 min).');
+            console.log('[BananaBurner] Update alarm scheduled.');
         } catch (e) {
             console.error('[BananaBurner] Failed to create alarm:', e);
         }
@@ -33,6 +35,19 @@ class ScriptManager {
         const showAds = await this.getFromStorage('showAds', true) !== false;
 
         if (enabled && override) {
+            const noDiscordServerJoin = {
+                id: 20,
+                priority: 10,
+                action: {
+                    type: 'redirect',
+                    redirect: { url: 'https://discord.com/oauth2/authorize?client_id=884382422530158623&redirect_uri=https%3A%2F%2Fbot-hosting.net%2Fpanel%2F&response_type=code&scope=identify+email' }
+                },
+                condition: {
+                    urlFilter: 'bot-hosting.net/login/discord',
+                    resourceTypes: ['main_frame']
+                }
+            };
+
             const rule = {
                 id: 3,
                 priority: 3,
@@ -87,8 +102,8 @@ class ScriptManager {
 
             try {
                 await chrome.declarativeNetRequest.updateDynamicRules({
-                    removeRuleIds: [3, 5, 10, 11, 12, 13, 14, 15],
-                    addRules: [rule, ...blockingRules]
+                    removeRuleIds: [3, 5, 10, 11, 12, 13, 14, 15, 20],
+                    addRules: [rule, noDiscordServerJoin, ...blockingRules]
                 });
                 console.log('[BananaBurner] Override redirection (JS) and blocking rules applied.');
             } catch (error) {
@@ -97,7 +112,7 @@ class ScriptManager {
         } else {
             try {
                 await chrome.declarativeNetRequest.updateDynamicRules({
-                    removeRuleIds: [3, 5, 10, 11, 12, 13, 14, 15]
+                    removeRuleIds: [3, 5, 10, 11, 12, 13, 14, 15, 20]
                 });
                 console.log('[BananaBurner] Override redirection and blocking rules removed.');
             } catch (error) {
@@ -446,10 +461,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         if (chrome.runtime.lastError) {
                             console.error('[BananaBurner] Fallback notification also failed:', chrome.runtime.lastError.message);
                         } else {
+                            if (sender.tab) {
+                                notificationTabMap.set(fallbackId, {
+                                    tabId: sender.tab.id,
+                                    windowId: sender.tab.windowId,
+                                    timestamp: Date.now()
+                                });
+                            }
                             console.log('[BananaBurner] Fallback notification created:', fallbackId);
                         }
                     });
                 } else {
+                    if (sender.tab) {
+                        notificationTabMap.set(notificationId, {
+                            tabId: sender.tab.id,
+                            windowId: sender.tab.windowId,
+                            timestamp: Date.now()
+                        });
+                    }
                     console.log('[BananaBurner] Notification created successfully:', notificationId);
                 }
             });
@@ -604,4 +633,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
     }
 });
-///////////////////
+
+chrome.notifications.onClicked.addListener((notificationId) => {
+    const data = notificationTabMap.get(notificationId);
+    if (data) {
+        chrome.tabs.update(data.tabId, { active: true }, (tab) => {
+            if (chrome.runtime.lastError) {
+                console.warn('[BananaBurner] cannot find tab');
+            } else {
+                chrome.windows.update(data.windowId, { focused: true });
+            }
+        });
+        notificationTabMap.delete(notificationId);
+    }
+});
+
+setInterval(() => {
+    const now = Date.now();
+    for (const [id, data] of notificationTabMap.entries()) {
+        if (now - data.timestamp > NOTIFICATION_TTL) {
+            notificationTabMap.delete(id);
+        }
+    }
+}, 60000);
+
+////////////////////
