@@ -6,7 +6,7 @@
     // IF YOU DOWNLOADED IT FROM ANYWHERE ELSE, DELETE AND REPORT IT TO TERMUX LABS
     // IF A STRANGER GAVE YOU THIS FILE 11 TIMES OUT OF 10 YOU ARE GETTING SCREWED.
     const CONFIG = {
-        SCRIPT_VERSION: '3.3', // *
+        SCRIPT_VERSION: '3.4', // *
         FAVICON_URL: 'https://raw.githubusercontent.com/relentiousdragon/BananaBurner/refs/heads/main/icons/icon48.png', // ?
         MAX_COINS_PER_DAY: 10, // *
         NORMAL_COIN_INTERVAL: localStorage.getItem('bh-normal-coin-interval') ? parseInt(localStorage.getItem('bh-normal-coin-interval')) : 10000, // ?
@@ -137,7 +137,15 @@
                     .replace(/&amp;/g, '&');
                 return `<span${unescapedAttrs}>`;
             })
-            .replace(/&lt;\/span&gt;/g, '</span>');
+            .replace(/&lt;\/span&gt;/g, '</span>')
+            .replace(/&lt;small(.*?)&gt;/g, (match, p1) => {
+                const unescapedAttrs = p1
+                    .replace(/&quot;/g, '"')
+                    .replace(/&#039;/g, "'")
+                    .replace(/&amp;/g, '&');
+                return `<small${unescapedAttrs}>`;
+            })
+            .replace(/&lt;\/small&gt;/g, '</small>');
     };
 
     const BnLog = (tag, msg, ...args) => {
@@ -166,6 +174,13 @@
 
         if (tag === 'ERROR') {
             console.error(
+                `%c ${tag} %c ${msg}`,
+                style,
+                'color: inherit;',
+                ...args
+            );
+        } else if (tag === 'WARN') {
+            console.warn(
                 `%c ${tag} %c ${msg}`,
                 style,
                 'color: inherit;',
@@ -355,7 +370,7 @@
             waitingForCaptcha: false,
             captchaClaimInProgress: false,
             initialLoadComplete: false,
-            customCaptchaWidgetId: null,
+            hCaptchaWidgetId: null,
             bananaMode: _ls.get('banana-mode') === 'true' || false,
             konamiCode: [], // BANANANAAA
             KONAMI_CODE: ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA'],
@@ -455,6 +470,7 @@
                 { id: 'servers', type: 'internal', label: 'Create Server', icon: 'fas fa-rocket', view: 'servers', color: 'success' },
                 { id: 'manage', type: 'internal', label: 'Manage Servers', icon: 'fas fa-cogs', view: 'manage', color: 'warning' },
                 //{ id: 'market', type: 'internal', label: 'Market', icon: 'fas fa-store', view: 'market', color: 'info' },
+                { id: 'support', type: 'url', label: 'Bot-Hosting Support', icon: 'fab fa-discord', url: 'https://discord.gg/kvXeb6m29c', color: 'secondary' },
                 { id: 'uptime', type: 'internal', label: 'Uptime Monitor', icon: 'fas fa-heart-pulse', view: 'uptime', color: 'info' },
                 { id: 'wiki', type: 'internal', label: 'Wiki', icon: 'fas fa-book', view: 'wiki', color: 'secondary' }
             ]),
@@ -534,7 +550,9 @@
             success: [{ freq: 1200, dur: 100, type: 'sine', vol: 0.2 }, { freq: 1500, dur: 200, type: 'sine', vol: 0.25, delay: 100 }],
             error: [{ freq: 300, dur: 300, type: 'sawtooth', vol: 0.25 }, { freq: 250, dur: 400, type: 'sawtooth', vol: 0.3, delay: 200 }],
             buttonClick: [{ freq: 600, dur: 50, type: 'sine', vol: 0.1 }],
-            toast: [{ freq: 880, dur: 80, type: 'sine', vol: 0.1 }]
+            toast: [{ freq: 880, dur: 80, type: 'sine', vol: 0.1 }],
+            serverRunning: [{ freq: 800, dur: 150, type: 'sine', vol: 0.2 }, { freq: 1000, dur: 200, type: 'sine', vol: 0.15, delay: 100 }],
+            serverStopped: [{ freq: 600, dur: 200, type: 'sine', vol: 0.2 }, { freq: 400, dur: 250, type: 'sine', vol: 0.15, delay: 150 }]
         },
         minimal: {
             coinCollect: [{ freq: 1000, dur: 80, type: 'sine', vol: 0.15 }],
@@ -544,7 +562,9 @@
             success: [{ freq: 1100, dur: 60, type: 'sine', vol: 0.15 }],
             error: [{ freq: 400, dur: 100, type: 'sine', vol: 0.15 }],
             buttonClick: [{ freq: 800, dur: 30, type: 'sine', vol: 0.08 }],
-            toast: [{ freq: 700, dur: 40, type: 'sine', vol: 0.08 }]
+            toast: [{ freq: 700, dur: 40, type: 'sine', vol: 0.08 }],
+            serverRunning: [{ freq: 1100, dur: 80, type: 'sine', vol: 0.15 }],
+            serverStopped: [{ freq: 400, dur: 100, type: 'sine', vol: 0.15 }]
         },
         cyberpunk: {
             coinCollect: [{ freq: 150, dur: 100, type: 'sawtooth', vol: 0.2 }, { freq: 300, dur: 150, type: 'square', vol: 0.15, delay: 80 }, { freq: 600, dur: 200, type: 'sawtooth', vol: 0.2, delay: 150 }],
@@ -554,7 +574,9 @@
             success: [{ freq: 200, dur: 80, type: 'square', vol: 0.2 }, { freq: 400, dur: 150, type: 'sawtooth', vol: 0.25, delay: 80 }],
             error: [{ freq: 80, dur: 400, type: 'sawtooth', vol: 0.3 }, { freq: 60, dur: 500, type: 'square', vol: 0.25, delay: 200 }],
             buttonClick: [{ freq: 180, dur: 40, type: 'square', vol: 0.12 }],
-            toast: [{ freq: 250, dur: 60, type: 'sawtooth', vol: 0.1 }]
+            toast: [{ freq: 250, dur: 60, type: 'sawtooth', vol: 0.1 }],
+            serverRunning: [{ freq: 100, dur: 150, type: 'sawtooth', vol: 0.2 }, { freq: 400, dur: 200, type: 'square', vol: 0.15, delay: 100 }],
+            serverStopped: [{ freq: 200, dur: 250, type: 'square', vol: 0.2 }, { freq: 50, dur: 300, type: 'sawtooth', vol: 0.15, delay: 150 }]
         },
         retro: {
             coinCollect: [{ freq: 523, dur: 100, type: 'square', vol: 0.2 }, { freq: 659, dur: 100, type: 'square', vol: 0.2, delay: 100 }, { freq: 784, dur: 150, type: 'square', vol: 0.25, delay: 200 }],
@@ -564,7 +586,9 @@
             success: [{ freq: 440, dur: 80, type: 'square', vol: 0.2 }, { freq: 880, dur: 150, type: 'square', vol: 0.25, delay: 80 }],
             error: [{ freq: 200, dur: 200, type: 'square', vol: 0.25 }, { freq: 150, dur: 300, type: 'square', vol: 0.25, delay: 200 }],
             buttonClick: [{ freq: 440, dur: 40, type: 'square', vol: 0.1 }],
-            toast: [{ freq: 523, dur: 50, type: 'square', vol: 0.1 }]
+            toast: [{ freq: 523, dur: 50, type: 'square', vol: 0.1 }],
+            serverRunning: [{ freq: 523, dur: 100, type: 'square', vol: 0.2 }, { freq: 659, dur: 100, type: 'square', vol: 0.2, delay: 100 }, { freq: 784, dur: 150, type: 'square', vol: 0.2, delay: 200 }],
+            serverStopped: [{ freq: 784, dur: 100, type: 'square', vol: 0.2 }, { freq: 659, dur: 100, type: 'square', vol: 0.2, delay: 100 }, { freq: 523, dur: 200, type: 'square', vol: 0.2, delay: 200 }]
         },
         nature: {
             coinCollect: [{ freq: 1200, dur: 300, type: 'sine', vol: 0.15 }, { freq: 1400, dur: 400, type: 'sine', vol: 0.1, delay: 200 }],
@@ -574,7 +598,21 @@
             success: [{ freq: 1000, dur: 200, type: 'sine', vol: 0.15 }, { freq: 1200, dur: 300, type: 'sine', vol: 0.12, delay: 150 }],
             error: [{ freq: 250, dur: 500, type: 'sine', vol: 0.15 }, { freq: 200, dur: 600, type: 'sine', vol: 0.12, delay: 300 }],
             buttonClick: [{ freq: 500, dur: 80, type: 'sine', vol: 0.08 }],
-            toast: [{ freq: 700, dur: 100, type: 'sine', vol: 0.08 }]
+            toast: [{ freq: 700, dur: 100, type: 'sine', vol: 0.08 }],
+            serverRunning: [{ freq: 600, dur: 300, type: 'sine', vol: 0.15 }, { freq: 900, dur: 400, type: 'sine', vol: 0.12, delay: 200 }],
+            serverStopped: [{ freq: 400, dur: 400, type: 'sine', vol: 0.15 }, { freq: 200, dur: 500, type: 'sine', vol: 0.12, delay: 300 }]
+        },
+        clown: {
+            coinCollect: [{ freq: 180, dur: 80, type: 'square', vol: 0.3 }, { freq: 220, dur: 80, type: 'square', vol: 0.25, delay: 80 }, { freq: 180, dur: 120, type: 'square', vol: 0.3, delay: 160 }],
+            serverCreate: [{ freq: 300, dur: 100, type: 'square', vol: 0.25 }, { freq: 400, dur: 100, type: 'square', vol: 0.25, delay: 100 }, { freq: 500, dur: 100, type: 'square', vol: 0.25, delay: 200 }, { freq: 350, dur: 80, type: 'sawtooth', vol: 0.2, delay: 300 }, { freq: 600, dur: 200, type: 'square', vol: 0.3, delay: 380 }],
+            captchaRequired: [{ freq: 400, dur: 300, type: 'sawtooth', vol: 0.2 }, { freq: 350, dur: 300, type: 'sawtooth', vol: 0.2, delay: 300 }, { freq: 300, dur: 400, type: 'sawtooth', vol: 0.25, delay: 600 }],
+            allCoinsClaimed: [{ freq: 200, dur: 150, type: 'square', vol: 0.3 }, { freq: 250, dur: 100, type: 'square', vol: 0.25, delay: 120 }, { freq: 200, dur: 200, type: 'square', vol: 0.3, delay: 220 }],
+            success: [{ freq: 500, dur: 60, type: 'square', vol: 0.2 }, { freq: 700, dur: 80, type: 'square', vol: 0.15, delay: 60 }, { freq: 300, dur: 100, type: 'sawtooth', vol: 0.2, delay: 140 }],
+            error: [{ freq: 300, dur: 250, type: 'sawtooth', vol: 0.25 }, { freq: 280, dur: 250, type: 'sawtooth', vol: 0.22, delay: 250 }, { freq: 250, dur: 300, type: 'sawtooth', vol: 0.2, delay: 500 }, { freq: 200, dur: 400, type: 'sawtooth', vol: 0.25, delay: 800 }],
+            buttonClick: [{ freq: 400, dur: 30, type: 'square', vol: 0.15 }, { freq: 600, dur: 50, type: 'sine', vol: 0.1, delay: 30 }],
+            toast: [{ freq: 200, dur: 100, type: 'square', vol: 0.15 }, { freq: 250, dur: 80, type: 'square', vol: 0.12, delay: 100 }],
+            serverRunning: [{ freq: 300, dur: 100, type: 'square', vol: 0.2 }, { freq: 400, dur: 100, type: 'square', vol: 0.2, delay: 100 }, { freq: 500, dur: 150, type: 'square', vol: 0.2, delay: 200 }],
+            serverStopped: [{ freq: 400, dur: 200, type: 'sawtooth', vol: 0.2 }, { freq: 350, dur: 200, type: 'sawtooth', vol: 0.18, delay: 200 }, { freq: 250, dur: 350, type: 'sawtooth', vol: 0.22, delay: 400 }]
         }
     };
 
@@ -646,8 +684,7 @@
             throw err;
         }
     }
-
-
+    //
     const SoundManager = {
         init() {
             try {
@@ -659,10 +696,13 @@
         },
 
         getCurrentPack() {
+            if (isAprilFools() && !state._aprilFoolsDone && SOUND_PACKS.clown) {
+                return SOUND_PACKS.clown;
+            }
             return SOUND_PACKS[state.settings.soundPack] || SOUND_PACKS.default;
         },
 
-        playTone(frequency, duration, type = 'sine', volume = 0.3) {
+        playTone(frequency, duration, type = 'sine', volume = 0.3, frequencyEnd = null) {
             if (!state.soundEnabled || !state.audioContext) return;
 
             try {
@@ -672,28 +712,34 @@
                 oscillator.connect(gainNode);
                 gainNode.connect(state.audioContext.destination);
 
-                oscillator.frequency.value = frequency;
                 oscillator.type = type;
+                const now = state.audioContext.currentTime;
 
-                gainNode.gain.setValueAtTime(0, state.audioContext.currentTime);
-                gainNode.gain.linearRampToValueAtTime(volume, state.audioContext.currentTime + 0.01);
-                gainNode.gain.exponentialRampToValueAtTime(0.001, state.audioContext.currentTime + duration / 1000);
+                if (frequencyEnd && frequencyEnd !== frequency) {
+                    oscillator.frequency.setValueAtTime(frequency, now);
+                    oscillator.frequency.exponentialRampToValueAtTime(frequencyEnd, now + duration / 1000);
+                } else {
+                    oscillator.frequency.setValueAtTime(frequency, now);
+                }
 
-                oscillator.start(state.audioContext.currentTime);
-                oscillator.stop(state.audioContext.currentTime + duration / 1000);
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.linearRampToValueAtTime(volume, now + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration / 1000);
+
+                oscillator.start(now);
+                oscillator.stop(now + duration / 1000);
             } catch (e) {
-                BnLog('WARN', 'Failed to play sound:', e);
+                //
             }
         },
 
         playSequence(sounds) {
-            if (!sounds || !Array.isArray(sounds)) return;
-            sounds.forEach(s => {
-                if (s.delay) {
-                    setTimeout(() => this.playTone(s.freq, s.dur, s.type, s.vol), s.delay);
-                } else {
-                    this.playTone(s.freq, s.dur, s.type, s.vol);
-                }
+            if (!sounds) return;
+            const items = Array.isArray(sounds) ? sounds : [sounds];
+            items.forEach(s => {
+                const play = () => this.playTone(s.freq, s.dur, s.type || 'sine', s.vol || 0.3, s.freqEnd);
+                if (s.delay) setTimeout(play, s.delay);
+                else play();
             });
         },
 
@@ -751,10 +797,21 @@
             this.playSequence(this.getCurrentPack().toast);
         },
 
+        playServerRunning() {
+            this.playSequence(this.getCurrentPack().serverRunning);
+        },
+
+        playServerStopped() {
+            this.playSequence(this.getCurrentPack().serverStopped);
+        },
+
         setSoundPack(packName) {
             if (SOUND_PACKS[packName]) {
                 state.settings.soundPack = packName;
                 localStorage.setItem('bh-sound-pack', packName);
+                if (isAprilFools()) {
+                    state._aprilFoolsDone = true;
+                }
             }
         }
     };
@@ -1809,97 +1866,106 @@
                         state.settings.themeName = importedName;
                         localStorage.setItem('bh-theme-name', importedName);
 
-                        if (data.splashV2 !== undefined) {
-                            state.settings.splashV2 = data.splashV2;
-                            localStorage.setItem('bh-splash-v2', JSON.stringify(state.settings.splashV2));
-                        }
+                        try {
+                            if (data.splashV2 !== undefined) {
+                                state.settings.splashV2 = data.splashV2;
+                                localStorage.setItem('bh-splash-v2', JSON.stringify(state.settings.splashV2));
+                            }
 
-                        if (data.themeTitle) {
-                            state.settings.themeTitle = data.themeTitle;
-                            localStorage.setItem('bh-theme-title', data.themeTitle);
-                        } else {
-                            state.settings.themeTitle = 'BananaBurner 2979';
-                            localStorage.removeItem('bh-theme-title');
-                        }
+                            if (data.themeTitle) {
+                                state.settings.themeTitle = data.themeTitle;
+                                localStorage.setItem('bh-theme-title', data.themeTitle);
+                            } else {
+                                state.settings.themeTitle = 'BananaBurner 2979';
+                                localStorage.removeItem('bh-theme-title');
+                            }
 
-                        if (data.themeBackgroundImage !== undefined) {
-                            state.settings.themeBackgroundImage = data.themeBackgroundImage;
-                            localStorage.setItem('bh-theme-bg-image', data.themeBackgroundImage);
-                        }
+                            if (data.themeBackgroundImage !== undefined) {
+                                state.settings.themeBackgroundImage = data.themeBackgroundImage;
+                                localStorage.setItem('bh-theme-bg-image', data.themeBackgroundImage);
+                            }
 
-                        if (data.theme) {
-                            state.theme = data.theme;
-                            localStorage.setItem('banana-theme', data.theme);
-                        }
+                            if (data.theme) {
+                                state.theme = data.theme;
+                                localStorage.setItem('banana-theme', data.theme);
+                            }
 
-                        if (data.customTheme !== undefined) {
-                            state.settings.customTheme = data.customTheme;
-                            localStorage.setItem('bh-custom-theme', JSON.stringify(data.customTheme));
-                        }
+                            if (data.customTheme !== undefined) {
+                                state.settings.customTheme = data.customTheme;
+                                localStorage.setItem('bh-custom-theme', JSON.stringify(data.customTheme));
+                            }
 
-                        if (data.cornerRadius !== undefined) {
-                            state.settings.cornerRadius = data.cornerRadius;
-                            localStorage.setItem('bh-corner-radius', data.cornerRadius);
-                        }
+                            if (data.cornerRadius !== undefined) {
+                                state.settings.cornerRadius = data.cornerRadius;
+                                localStorage.setItem('bh-corner-radius', data.cornerRadius);
+                            }
 
-                        if (data.borderWidth !== undefined) {
-                            state.settings.borderWidth = data.borderWidth;
-                            localStorage.setItem('bh-border-width', data.borderWidth);
-                        }
+                            if (data.borderWidth !== undefined) {
+                                state.settings.borderWidth = data.borderWidth;
+                                localStorage.setItem('bh-border-width', data.borderWidth);
+                            }
 
-                        if (data.popupBlur !== undefined) {
-                            state.settings.popupBlur = data.popupBlur;
-                            localStorage.setItem('bh-popup-blur', data.popupBlur);
-                        }
+                            if (data.popupBlur !== undefined) {
+                                state.settings.popupBlur = data.popupBlur;
+                                localStorage.setItem('bh-popup-blur', data.popupBlur);
+                            }
 
-                        if (data.fontPrimary) {
-                            state.settings.fontPrimary = data.fontPrimary;
-                            localStorage.setItem('bh-font-primary', data.fontPrimary);
-                        }
+                            if (data.fontPrimary) {
+                                state.settings.fontPrimary = data.fontPrimary;
+                                localStorage.setItem('bh-font-primary', data.fontPrimary);
+                            }
 
-                        if (data.fontSecondary) {
-                            state.settings.fontSecondary = data.fontSecondary;
-                            localStorage.setItem('bh-font-secondary', data.fontSecondary);
-                        }
+                            if (data.fontSecondary) {
+                                state.settings.fontSecondary = data.fontSecondary;
+                                localStorage.setItem('bh-font-secondary', data.fontSecondary);
+                            }
 
-                        if (data.gradientBg) {
-                            state.settings.gradientBg = data.gradientBg;
-                            localStorage.setItem('bh-gradient-bg', JSON.stringify(data.gradientBg));
-                        }
+                            if (data.gradientBg) {
+                                state.settings.gradientBg = data.gradientBg;
+                                localStorage.setItem('bh-gradient-bg', JSON.stringify(data.gradientBg));
+                            }
 
-                        if (data.toastColors) {
-                            state.settings.toastColors = data.toastColors;
-                            localStorage.setItem('bh-toast-colors', JSON.stringify(data.toastColors));
-                        }
+                            if (data.toastColors) {
+                                state.settings.toastColors = data.toastColors;
+                                localStorage.setItem('bh-toast-colors', JSON.stringify(data.toastColors));
+                            }
 
-                        if (data.soundPack) {
-                            state.settings.soundPack = data.soundPack;
-                            localStorage.setItem('bh-sound-pack', data.soundPack);
-                        }
+                            if (data.soundPack) {
+                                state.settings.soundPack = data.soundPack;
+                                localStorage.setItem('bh-sound-pack', data.soundPack);
+                            }
 
-                        if (data.cursorGlow !== undefined) {
-                            state.settings.cursorGlow = data.cursorGlow;
-                            localStorage.setItem('bh-cursor-glow', JSON.stringify(data.cursorGlow));
-                        }
+                            if (data.cursorGlow !== undefined) {
+                                state.settings.cursorGlow = data.cursorGlow;
+                                localStorage.setItem('bh-cursor-glow', JSON.stringify(data.cursorGlow));
+                            }
 
-                        if (data.cursorGlowColor) {
-                            state.settings.cursorGlowColor = data.cursorGlowColor;
-                            localStorage.setItem('bh-cursor-glow-color', data.cursorGlowColor);
-                        }
+                            if (data.cursorGlowColor) {
+                                state.settings.cursorGlowColor = data.cursorGlowColor;
+                                localStorage.setItem('bh-cursor-glow-color', data.cursorGlowColor);
+                            }
 
-                        applyTheme(state.theme);
-                        applyAllSettings();
-                        showToast('Theme imported successfully!', 'success');
+                            applyTheme(state.theme);
+                            applyAllSettings();
+                            showToast('Theme imported successfully!', 'success');
 
-                        const modal = document.getElementById('bh-profile-modal');
-                        if (modal) {
-                            modal.classList.remove('visible');
-                            setTimeout(() => {
-                                if (modal.parentNode) modal.parentNode.removeChild(modal);
-                                showProfileModal();
-                                const settingsTab = document.querySelector('.profile-tab[data-tab="settings"]');
-                                if (settingsTab) settingsTab.click();
-                            }, 300);
+                            const modal = document.getElementById('bh-profile-modal');
+                            if (modal) {
+                                modal.classList.remove('visible');
+                                setTimeout(() => {
+                                    if (modal.parentNode) modal.parentNode.removeChild(modal);
+                                    showProfileModal();
+                                    const settingsTab = document.querySelector('.profile-tab[data-tab="settings"]');
+                                    if (settingsTab) settingsTab.click();
+                                }, 300);
+                            }
+                        } catch (storageError) {
+                            BnLog('ERROR', 'Theme import failed:', storageError);
+                            if (storageError.name === 'QuotaExceededError' || storageError.code === 22) {
+                                showToast('failed to set theme. Try deleting activity history', 'error');
+                            } else {
+                                showToast('Failed to save theme settings.', 'error');
+                            }
                         }
                     }, versionComparison < 0 ? 'Import anyway' : 'Import', false);
                 };
@@ -2632,26 +2698,33 @@
     }
 
     function formatRelativeTime(timestamp) {
+        if (!timestamp) return '–';
         const now = Date.now();
-        const diff = now - parseInt(timestamp);
+        let t = new Date(timestamp).getTime();
 
+        if (isNaN(t) && typeof timestamp === 'string' && /^\d+$/.test(timestamp)) {
+            const num = parseInt(timestamp);
+            if (!isNaN(num)) {
+                t = (num < 10000000000) ? num * 1000 : num;
+            }
+        }
+
+        if (isNaN(t)) return '–';
+
+        const diff = now - t;
         const seconds = Math.floor(diff / 1000);
         const minutes = Math.floor(seconds / 60);
         const hours = Math.floor(minutes / 60);
         const days = Math.floor(hours / 24);
         const months = Math.floor(days / 30);
+        const years = Math.floor(days / 365);
 
-        if (months > 0) {
-            return months === 1 ? '1 month ago' : `${months} months ago`;
-        } else if (days > 0) {
-            return days === 1 ? '1 day ago' : `${days} days ago`;
-        } else if (hours > 0) {
-            return hours === 1 ? '1 hour ago' : `${hours} hours ago`;
-        } else if (minutes > 0) {
-            return minutes === 1 ? '1 minute ago' : `${minutes} minutes ago`;
-        } else {
-            return 'Just now';
-        }
+        if (years > 0) return years === 1 ? '1 year ago' : `${years} years ago`;
+        if (months > 0) return months === 1 ? '1 month ago' : `${months} months ago`;
+        if (days > 0) return days === 1 ? '1 day ago' : `${days} days ago`;
+        if (hours > 0) return hours === 1 ? '1 hour ago' : `${hours} hours ago`;
+        if (minutes > 0) return minutes === 1 ? '1 minute ago' : `${minutes} minutes ago`;
+        return 'Just now';
     }
 
     function startResetTimer() {
@@ -3842,11 +3915,13 @@ debug:
 
     async function initializeMainApp(onProgress) {
         const osrc = localStorage.getItem('OSRC') === 'true';
+        StartupCleanup();
         SoundManager.init();
         loadCoinProgress();
         applyTheme(state.theme);
         setupKeyboardNavigation();
         setupEasterEggs();
+        initAprilFools();
         setupShortcutListeners();
 
         const params = new URLSearchParams(window.location.search);
@@ -4625,7 +4700,16 @@ debug:
                 case 'status': {
                     const status = data.args[0];
                     if (state.controlPanel.resources[identifier]) {
+                        const oldStatus = state.controlPanel.resources[identifier].data.current_state;
                         state.controlPanel.resources[identifier].data.current_state = status;
+
+                        if (oldStatus && oldStatus !== status) {
+                            if (status === 'running') {
+                                SoundManager.playServerRunning();
+                            } else if (status === 'offline' || status === 'stopped') {
+                                SoundManager.playServerStopped();
+                            }
+                        }
 
                         if (status === 'offline' || status === 'stopped') {
                             state.controlPanel.resources[identifier].data.resources = {
@@ -5261,6 +5345,7 @@ debug:
     }
 
     function cleanupActivityCache() {
+        if (!state.transactions || !Array.isArray(state.transactions)) return;
         const maxDays = state.settings.activityCacheDays || 7;
         const now = Date.now();
         const cutoff = now - (maxDays * 24 * 60 * 60 * 1000);
@@ -5278,6 +5363,77 @@ debug:
         if (state.transactions.length !== initialCount) {
             saveActivityCache();
         }
+    }
+
+    function deleteActivityHistory() {
+        if (!state.user || !state.user.id) return;
+        const key = `bh-activity-cache-${state.user.id}`;
+        localStorage.removeItem(key);
+        state.transactions = [];
+        BnLog('INFO', `activity history deleted for User ${state.user.id}`);
+        showToast('Activity history cleared!', 'success');
+        updateDashboard(true);
+    }
+    //
+    function StartupCleanup() {
+        BnLog('STARTUP', 'Cleaning up..');
+
+        try {
+            const maxDays = state.settings.activityCacheDays || 7;
+            const now = Date.now();
+            const cutoff = now - (maxDays * 24 * 60 * 60 * 1000);
+
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('bh-activity-cache-')) {
+                    const cached = _ls.json(key, null);
+                    if (cached && Array.isArray(cached)) {
+                        const initialCount = cached.length;
+                        const filtered = cached.filter(t => {
+                            const date = parseInt(t.date);
+                            return !isNaN(date) && date >= cutoff;
+                        });
+                        if (filtered.length !== initialCount) {
+                            localStorage.setItem(key, JSON.stringify(filtered));
+                            BnLog('INFO', `Pruned ${initialCount - filtered.length} expired items from ${key}`);
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            BnLog('WARN', 'activity cleanup failed:', e);
+        }
+
+        cleanupActivityCache();
+
+        try {
+            const serverIds = state.serverCreator.servers.map(s => s.serverid.toString());
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('bh-vfs-')) {
+                    const sid = key.replace('bh-vfs-', '');
+                    if (serverIds.length > 0 && !serverIds.includes(sid)) {
+                        localStorage.removeItem(key);
+                        BnLog('INFO', `Cleaned up stale VFS data for server ${sid}`);
+                    }
+                }
+            }
+        } catch (e) {
+            BnLog('WARN', 'VFS cleanup failed:', e);
+        }
+
+        if (state.serverDetailsCache && Object.keys(state.serverDetailsCache).length > 100) {
+            const keys = Object.keys(state.serverDetailsCache);
+            const pruned = {};
+            keys.sort((a, b) => (state.serverDetailsCache[b].timestamp || 0) - (state.serverDetailsCache[a].timestamp || 0))
+                .slice(0, 50)
+                .forEach(k => pruned[k] = state.serverDetailsCache[k]);
+            state.serverDetailsCache = pruned;
+            saveServerDetailsCache();
+            BnLog('INFO', 'Pruned server details cache to 50 items');
+        }
+
+        BnLog('SUCCESS', 'cleanup complete.');
     }
 
 
@@ -5452,7 +5608,21 @@ debug:
         try {
             localStorage.setItem('bh-server-details-cache', JSON.stringify(state.serverDetailsCache));
         } catch (e) {
-            BnLog('ERROR', 'Failed to save server details cache', e);
+            BnLog('ERROR', 'Failed to save server details cache:', e);
+            if (e.name === 'QuotaExceededError' || e.code === 22) {
+                const keys = Object.keys(state.serverDetailsCache);
+                if (keys.length > 0) {
+                    keys.sort((a, b) => (state.serverDetailsCache[a].timestamp || 0) - (state.serverDetailsCache[b].timestamp || 0));
+                    const toRemove = keys.slice(0, Math.ceil(keys.length / 2));
+                    toRemove.forEach(k => delete state.serverDetailsCache[k]);
+                    BnLog('INFO', `Quota error, Pruned ${toRemove.length} server cache entries`);
+                    try {
+                        localStorage.setItem('bh-server-details-cache', JSON.stringify(state.serverDetailsCache));
+                    } catch (e2) {
+                        BnLog('ERROR', 'second save attempt failed after pruning:', e2);
+                    }
+                }
+            }
         }
     }
 
@@ -5536,7 +5706,7 @@ debug:
         const btn = document.getElementById('unsuspend-btn');
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Unsuspending...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size: 1.2em; margin-right: 0.1rem; vertical-align: middle;"></i> Unsuspending...';
         }
 
         try {
@@ -5558,7 +5728,7 @@ debug:
                     existingModal.classList.remove('visible');
                     setTimeout(() => existingModal.remove(), 300);
                 }
-                fetchUserData();
+                fetchUserData(true);
                 setTimeout(() => {
                     showServerDetails(serverId, true);
                 }, 400);
@@ -5589,7 +5759,7 @@ debug:
         }
         return null;
     }
-
+    //
     async function checkCoinStatus() {
         try {
             const response = await fetchWithRetry('/api/freeCoinsStatus', {
@@ -5692,21 +5862,24 @@ debug:
             modal.classList.add('visible');
         }, 50);
 
+        window.onHcaptchaLoad = () => {
+            if (document.getElementById('captcha-loading')) {
+                document.getElementById('captcha-loading').style.display = 'none';
+            }
+            if (document.getElementById('bh-custom-hcaptcha-container')) {
+                document.getElementById('bh-custom-hcaptcha-container').style.display = 'block';
+            }
+            renderHCaptcha();
+        };
+
         if (!window.hcaptcha) {
             const script = document.createElement('script');
-            script.src = 'https://js.hcaptcha.com/1/api.js';
+            script.src = 'https://js.hcaptcha.com/1/api.js?render=explicit&onload=onHcaptchaLoad';
             script.async = true;
             script.defer = true;
-            script.onload = () => {
-                document.getElementById('captcha-loading').style.display = 'none';
-                document.getElementById('bh-custom-hcaptcha-container').style.display = 'block';
-                renderCustomHCaptcha();
-            };
             document.head.appendChild(script);
         } else {
-            document.getElementById('captcha-loading').style.display = 'none';
-            document.getElementById('bh-custom-hcaptcha-container').style.display = 'block';
-            renderCustomHCaptcha();
+            window.onHcaptchaLoad();
         }
 
         document.getElementById('bh-captcha-close').onclick = closeCaptchaModal;
@@ -5718,7 +5891,7 @@ debug:
                 if (modal.parentNode) modal.parentNode.removeChild(modal);
                 state.coinCollector.waitingForCaptcha = false;
                 SoundManager.stopCaptchaPulse();
-                showToast('CAPTCHA cancelled', 'warn');
+                //showToast('CAPTCHA cancelled', 'warn');
                 setTimeout(attemptCoinCollection, CONFIG.NORMAL_COIN_INTERVAL);
             }, 300);
         }
@@ -5726,18 +5899,18 @@ debug:
         return modal;
     }
 
-    function renderCustomHCaptcha() {
+    function renderHCaptcha() {
         const container = document.getElementById('bh-custom-hcaptcha-container');
         if (!container || !window.hcaptcha) return;
 
         try {
-            state.coinCollector.customCaptchaWidgetId = hcaptcha.render(container, {
+            state.coinCollector.hCaptchaWidgetId = hcaptcha.render(container, {
                 sitekey: CONFIG.HCAPTCHA_SITEKEY,
                 theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
                 size: 'normal',
                 callback: function (response) {
                     document.getElementById('bh-captcha-submit').style.display = 'flex';
-                    showToast('CAPTCHA solved! Click verify to continue', 'success');
+                    //showToast('CAPTCHA solved! click verify to continue', 'success');
                 },
                 'expired-callback': function () {
                     document.getElementById('bh-captcha-submit').style.display = 'none';
@@ -5746,9 +5919,9 @@ debug:
             });
 
             document.getElementById('bh-captcha-submit').onclick = () => {
-                const response = hcaptcha.getResponse(state.coinCollector.customCaptchaWidgetId);
+                const response = hcaptcha.getResponse(state.coinCollector.hCaptchaWidgetId);
                 if (response) {
-                    handleCustomCaptchaSolved(response);
+                    handleHcaptchaSolved(response);
                 } else {
                     showToast('Please complete the CAPTCHA first', 'warn');
                 }
@@ -5759,7 +5932,7 @@ debug:
         }
     }
 
-    function handleCustomCaptchaSolved(response) {
+    function handleHcaptchaSolved(response) {
         const modal = document.getElementById('bh-custom-captcha-modal');
         if (modal) {
             modal.classList.remove('visible');
@@ -5855,7 +6028,7 @@ debug:
         if (!state.coinCollector.running) return;
 
         if (!state.coinCollector.initialLoadComplete) {
-            await performInitialCheck();
+            await InitialCheck();
             return;
         }
 
@@ -5940,7 +6113,7 @@ debug:
         }
     }
 
-    async function performInitialCheck() {
+    async function InitialCheck() {
         const result = await claimCoins();
 
         if (result.success) {
@@ -6223,7 +6396,7 @@ debug:
         'dashboard': '/panel/',
         'coins': '/panel/earn',
         'servers': '/panel/create',
-        'manage': '/panel/manage',
+        'manage': '/panel/manageserver',
         'market': '/panel/market',
         'wiki': '/panel/wiki',
         'uptime': '/panel/status'
@@ -6369,7 +6542,15 @@ debug:
     function refreshUI(animate = false) {
         const content = document.getElementById('bh-main-content');
         if (content) {
+            if (state._aprilFools?.triggered && state.currentView === 'dashboard') {
+                triggerAprilFoolsReveal(true);
+                return;
+            }
+
             updateMainContent(animate);
+            if (typeof applyAprilFoolsOverlay === 'function' && state.currentView === 'dashboard') {
+                applyAprilFoolsOverlay();
+            }
             emitPluginEvent('dashboardRendered');
         }
     }
@@ -7586,6 +7767,7 @@ debug:
                   <option value="cyberpunk" ${state.settings.soundPack === 'cyberpunk' ? 'selected' : ''}>Cyberpunk</option>
                   <option value="retro" ${state.settings.soundPack === 'retro' ? 'selected' : ''}>Retro</option>
                   <option value="nature" ${state.settings.soundPack === 'nature' ? 'selected' : ''}>Nature</option>
+                  ${isAprilFools() ? `<option value="clown" ${state.settings.soundPack === 'clown' ? 'selected' : ''}>Clown</option>` : ''}
                 </select>
               </div>
 
@@ -7746,8 +7928,11 @@ debug:
                   <p style="color: var(--accent-error); font-weight: 600; margin-bottom: 0.5rem;"><i class="fas fa-exclamation-triangle" style="margin-right: 0.5rem;"></i>Danger Zone</p>
                   <p style="font-size: 0.85em; color: var(--text-secondary);">This will clear all script data including theme settings, quick actions, coin progress, and all preferences. This action cannot be undone.</p>
                 </div>
-                <button class="btn btn-danger" id="reset-local-storage-btn" style="width: 100%;">
+                <button class="btn btn-danger" id="reset-local-storage-btn" style="width: 100%; margin-bottom: 0.5rem;">
                   <i class="fas fa-trash-alt"></i> Reset All Local Storage
+                </button>
+                <button class="btn btn-danger" id="delete-activity-history-btn" style="width: 100%; background: transparent !important; border: 1px solid var(--accent-error) !important; color: var(--accent-error) !important;">
+                  <i class="fas fa-history"></i> Delete Activity History
                 </button>
               </div>
             </div>
@@ -8014,7 +8199,7 @@ debug:
             soundPackSelect.onchange = () => {
                 SoundManager.setSoundPack(soundPackSelect.value);
                 SoundManager.playButtonClick();
-                showToast(`Sound pack: ${soundPackSelect.value}`, 'info');
+                //showToast(`Sound pack: ${soundPackSelect.value}`, 'info');
             };
         }
 
@@ -8237,7 +8422,16 @@ debug:
         }
 
         const resetBtn = modal.querySelector('#reset-local-storage-btn');
+        const deleteHistoryBtn = modal.querySelector('#delete-activity-history-btn');
         const checkUpdateBtn = modal.querySelector('#check-extension-update-btn');
+
+        if (deleteHistoryBtn) {
+            deleteHistoryBtn.onclick = () => {
+                openConfirmModal('Delete Activity History', 'Are you sure you want to delete all activity history? This will clear your dashboard coin logs. <b>This cannot be undone.</b>', () => {
+                    deleteActivityHistory();
+                }, 'Delete', true);
+            };
+        }
 
         if (checkUpdateBtn) {
             checkUpdateBtn.addEventListener('click', async () => {
@@ -8769,6 +8963,9 @@ debug:
           <div class="pullout-flag settings-flag" data-panel="settings" title="Server Settings">
             <i class="fas fa-cog"></i>
           </div>
+          <div class="pullout-flag activity-flag" data-panel="activity" title="Activity">
+            <i class="fas fa-clock-rotate-left"></i>
+          </div>
           ${(pluginHooks.pulloutFlags || []).filter(h => !h.isVisible || h.isVisible(serverId)).map(h => `
           <div class="pullout-flag plugin-flag-${h.pluginId}-${h.id}" data-panel="plugin-${h.pluginId}-${h.id}" title="${h.title}">
             <i class="${h.icon}"></i>
@@ -8852,6 +9049,18 @@ debug:
             <h4><i class="fas fa-cog"></i> Server Settings</h4>
           </div>
           <div class="pullout-panel-body"></div>
+        </div>
+
+        <div class="pullout-panel activity-panel" data-panel="activity">
+          <div class="pullout-panel-header">
+            <h4><i class="fas fa-clock-rotate-left"></i> Activity</h4>
+          </div>
+          <div class="pullout-panel-body">
+            <div class="activity-loading files-loading">
+              <i class="fas fa-spinner fa-spin" style="font-size: 1.5rem;"></i>
+              <span>Loading activity...</span>
+            </div>
+          </div>
         </div>
         ${(pluginHooks.pulloutFlags || []).filter(h => !h.isVisible || h.isVisible(serverId)).map(h => `
         <div class="pullout-panel plugin-panel-${h.pluginId}-${h.id}" data-panel="plugin-${h.pluginId}-${h.id}">
@@ -9291,6 +9500,12 @@ debug:
                             panel.classList.add('visible');
                             loadSettingsPanel(details, serverId);
                         }
+                    } else if (panelType === 'activity') {
+                        const panel = modal.querySelector('.activity-panel');
+                        if (panel) {
+                            panel.classList.add('visible');
+                            loadActivityPanel(details.identifier);
+                        }
                     } else if (panelType && panelType.startsWith('plugin-')) {
                         const [, pluginId, hookId] = panelType.split('-');
                         const hook = (pluginHooks.pulloutFlags || []).find(h => h.pluginId === pluginId && h.id === hookId);
@@ -9332,6 +9547,7 @@ debug:
                         }
                         if (!perms.includes('startup.read')) modal.querySelector('.startup-flag')?.style.setProperty('display', 'none', 'important');
                         if (!perms.includes('allocation.read')) modal.querySelector('.network-flag')?.style.setProperty('display', 'none', 'important');
+                        if (!perms.includes('activity.read')) modal.querySelector('.activity-flag')?.style.setProperty('display', 'none', 'important');
 
                         const hasSettings = perms.includes('settings.rename') || perms.includes('settings.reinstall');
                         if (!hasSettings) modal.querySelector('.settings-flag')?.style.setProperty('display', 'none', 'important');
@@ -15069,6 +15285,226 @@ ignite();
 
     window.handlePanelSFTPGenerate = handlePanelSFTPGenerate;
 
+    function getActivityIcon(event) {
+        const e = event.toLowerCase();
+        if (e.includes('kill')) return { icon: 'fas fa-bolt', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' };
+        if (e.includes('restart')) return { icon: 'fas fa-redo', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' };
+        if (e.includes('startup.edit') || e.includes('variable')) return { icon: 'fas fa-sliders', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' };
+        if (e.includes('startup') || e.includes('start')) return { icon: 'fas fa-play', color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' };
+        if (e.includes('stop')) return { icon: 'fas fa-stop', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)' };
+        if (e.includes('file')) {
+            if (e.includes('delete')) return { icon: 'fas fa-file-circle-xmark', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)' };
+            if (e.includes('create') || e.includes('upload')) return { icon: 'fas fa-file-circle-plus', color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' };
+            return { icon: 'fas fa-file-lines', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' };
+        }
+        if (e.includes('backup')) return { icon: 'fas fa-archive', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' };
+        if (e.includes('database')) return { icon: 'fas fa-database', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.1)' };
+        if (e.includes('schedule')) return { icon: 'fas fa-calendar-alt', color: '#ec4899', bg: 'rgba(236, 72, 153, 0.1)' };
+        if (e.includes('allocation') || e.includes('network')) return { icon: 'fas fa-network-wired', color: '#6366f1', bg: 'rgba(99, 102, 241, 0.1)' };
+        if (e.includes('sftp') || e.includes('key')) return { icon: 'fas fa-key', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' };
+        return { icon: 'fas fa-history', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.1)' };
+    }
+
+    async function loadActivityPanel(identifier, page = 1) {
+        const modal = document.getElementById('bh-server-details-modal');
+        const panel = modal?.querySelector('.activity-panel');
+        const panelBody = panel?.querySelector('.pullout-panel-body');
+        if (!panelBody) return;
+
+        const serverId = state.controlPanel.selectedServerId;
+        const details = state.serverDetailsCache[serverId]?.data;
+
+        if (details) {
+            const stateDesc = getSidebarState(details);
+            if (stateDesc) {
+                renderSidebarStateMessage(panelBody, stateDesc, details);
+                return;
+            }
+        }
+
+        let skeletons = '';
+        for (let i = 0; i < 6; i++) {
+            skeletons += `
+                <div class="panel-list-item" style="flex-direction: column; align-items: stretch; gap: 0.4rem; padding: 0.75rem; min-height: 85px; border-bottom: 1px solid var(--border-light); height: auto !important; box-sizing: border-box; overflow: hidden; pointer-events: none;">
+                    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; width: 100%;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem; min-width: 0; flex: 1;">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(148, 163, 184, 0.15); flex-shrink: 0; animation: bananaSkeletonPulse 1.5s infinite ease-in-out;"></div>
+                            <div style="min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                                <div style="height: 12px; width: 140px; background: rgba(148, 163, 184, 0.15); border-radius: 4px; animation: bananaSkeletonPulse 1.5s infinite ease-in-out;"></div>
+                                <div style="height: 10px; width: 90px; background: rgba(148, 163, 184, 0.15); border-radius: 4px; animation: bananaSkeletonPulse 1.5s infinite ease-in-out; animation-delay: 0.2s;"></div>
+                            </div>
+                        </div>
+                        <div style="text-align: right; flex-shrink: 0; margin-left: 8px;">
+                            <div style="height: 10px; width: 60px; background: rgba(148, 163, 184, 0.15); border-radius: 4px; animation: bananaSkeletonPulse 1.5s infinite ease-in-out; animation-delay: 0.4s;"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        panelBody.innerHTML = `
+            <style>
+            @keyframes bananaSkeletonPulse {
+                0% { opacity: 0.4; }
+                50% { opacity: 0.8; }
+                100% { opacity: 0.4; }
+            }
+            </style>
+            <div class="panel-list activity-list" style="display: flex; flex-direction: column; min-height: 100%;">
+                ${skeletons}
+            </div>
+        `;
+        panelBody.scrollTop = 0;
+
+        try {
+            const response = await callProxyFetch(`https://control.bot-hosting.net/api/client/servers/${identifier}/activity?sort=-timestamp&page=${page}&per_page=25&include=actor`);
+
+            if (response.status === 403 || response.status === 401) {
+                panelBody.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-lock" style="font-size: 2rem; color: var(--text-secondary); margin-bottom: 1rem; opacity: 0.5;"></i>
+                        <h3>Permission Denied</h3>
+                        <p>You do not have permission to view activity logs.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const data = response?.data || {};
+            const activity = data.data || [];
+            const meta = data.meta?.pagination || {};
+
+            const list = panelBody.querySelector('.activity-list') || panelBody;
+            if ((!activity || !activity.length) && page === 1) {
+                list.innerHTML = `
+                    <div class="files-error">
+                        <i class="fas fa-clock-rotate-left"></i>
+                        <span>No activity recorded</span>
+                    </div>
+                `;
+                return;
+            }
+
+            const itemsHtml = activity.map(log => {
+                const attr = log.attributes || log;
+                const relativeTime = formatRelativeTime(attr.timestamp);
+                const eventRaw = attr.event || '';
+                const event = eventRaw
+                    .split(/[:\.]/)
+                    .filter(Boolean)
+                    .map(s => s.charAt(0).toUpperCase() + s.slice(1))
+                    .join(' ');
+
+                const visual = getActivityIcon(eventRaw);
+
+                let actorHtml = 'System';
+                const actorAttr = attr.relationships?.actor?.attributes;
+                if (actorAttr) {
+                    const email = actorAttr.email ? censorText(actorAttr.email) : (actorAttr.username ? escapeHTML(actorAttr.username) : '');
+                    const discordId = actorAttr.username || 'N/A';
+                    const actorAvatar = actorAttr.image || '';
+
+                    let avatarHtml = '';
+                    if (actorAvatar) {
+                        avatarHtml = `<img src="${escapeHTML(actorAvatar)}" style="width: 14px; height: 14px; border-radius: 50%; display: inline-block; vertical-align: middle; margin-right: 4px; border: 1px solid rgba(255,255,255,0.1);" onerror="this.style.display='none'">`;
+                    }
+
+                    if (email) {
+                        actorHtml = `
+                            <div class="activity-actor-wrapper" style="position: relative; display: inline-flex; align-items: center; max-width: 100%;">
+                                ${avatarHtml}
+                                <span style="text-decoration: underline dotted; text-underline-offset: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: help;">${email}</span>
+                                <div class="banana-tooltip banana-tooltip-sm">Discord ID: ${escapeHTML(String(discordId))}</div>
+                            </div>
+                        `;
+                    } else {
+                        actorHtml = 'Unknown';
+                    }
+                }
+
+                let propsHtml = '';
+                const props = attr.properties || {};
+                if (Object.keys(props).length > 0) {
+                    const parts = [];
+                    if (props.file) parts.push(`<span style="background: var(--bg-tertiary); padding: 4px 8px; border-radius: 4px; font-family: monospace; border: 1px solid var(--border-light); font-size: 0.65rem; word-break: break-all;">${escapeHTML(props.file)}</span>`);
+                    if (props.variable) {
+                        const oldVal = props.old !== undefined ? escapeHTML(String(props.old)) : '';
+                        const newVal = props.new !== undefined ? escapeHTML(String(props.new)) : '';
+                        const changeHtml = (oldVal && newVal && oldVal !== newVal)
+                            ? `<span style="text-decoration: line-through; opacity: 0.6;">${oldVal}</span> <i class="fas fa-arrow-right" style="font-size: 0.55rem; margin: 0 4px;"></i> <span>${newVal}</span>`
+                            : (newVal || oldVal || '');
+                        parts.push(`<div style="display: flex; flex-direction: column; gap: 4px; background: var(--bg-tertiary); padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-light); width: 100%; box-sizing: border-box;"><span style="font-weight: 600; color: var(--text-primary); font-size: 0.65rem;">${escapeHTML(props.variable)}</span><span style="opacity: 0.8; font-size: 0.65rem; white-space: pre-wrap; word-break: break-word;">${changeHtml}</span></div>`);
+                    }
+                    if (props.count && props.files) parts.push(`<span style="opacity: 0.7; font-size: 0.65rem; padding: 4px 0;">(${props.count} files)</span>`);
+
+                    if (parts.length > 0) {
+                        propsHtml = `<div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; margin-top: 6px; width: 100%; box-sizing: border-box;">${parts.join('')}</div>`;
+                    }
+                }
+                const ipHtml = attr.ip ? censorText(attr.ip) : '';
+
+                return `
+                    <div class="panel-list-item" style="flex-direction: column; align-items: stretch; gap: 0.4rem; padding: 0.75rem; min-height: 85px; height: auto !important; max-height: max-content !important; display: flex; flex: 0 0 auto; box-sizing: border-box; overflow: visible;">
+                        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; width: 100%;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; min-width: 0; flex: 1;">
+                                <div class="panel-list-item-icon" style="background: ${visual.bg}; color: ${visual.color}; width: 32px; height: 32px; font-size: 0.8rem; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+                                    <i class="${visual.icon}"></i>
+                                </div>
+                                <div class="panel-list-item-info" style="min-width: 0; flex: 1;">
+                                    <div class="panel-list-item-title" style="font-size: 0.85rem; color: var(--text-primary); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(event)}</div>
+                                    <div class="panel-list-item-subtitle" style="font-size: 0.7rem; color: var(--text-tertiary); overflow: visible; white-space: nowrap; margin-top: 2px;">
+                                        ${actorHtml}
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="text-align: right; flex-shrink: 0; margin-left: 8px;">
+                                <div style="font-size: 0.7rem; color: var(--text-tertiary); font-weight: 500; white-space: nowrap;">${relativeTime}</div>
+                                ${ipHtml ? `<div style="font-size: 0.6rem; color: var(--text-tertiary); opacity: 0.6; margin-top: 2px; font-family: monospace; text-align: right;">${ipHtml}</div>` : ''}
+                            </div>
+                        </div>
+                        ${propsHtml}
+                        ${attr.description ? `<div style="font-size: 0.75rem; color: var(--text-secondary); background: var(--bg-tertiary); padding: 0.5rem 0.75rem; border-radius: 8px; margin-top: 0.4rem; line-height: 1.4; border: 1px solid var(--border-light); word-break: break-word; white-space: pre-wrap;">${escapeHTML(attr.description)}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            const totalPages = meta.total_pages || meta.last_page || Math.ceil((meta.total || 0) / 25) || 1;
+            const currentPage = meta.current_page || page;
+
+            let paginationHtml = '';
+            if (totalPages > 1) {
+                paginationHtml = `
+                    <div style="display: flex; justify-content: center; align-items: center; gap: 8px; padding: 1.5rem 0; margin-top: auto; flex-shrink: 0; width: 100%;">
+                        <button onclick="loadActivityPanel('${identifier}', 1)" style="display: flex; justify-content: center; align-items: center; width: 28px; height: 28px; font-size: 0.75rem; border-radius: 6px; border: 1px solid var(--border-light); background: var(--bg-secondary); color: var(--text-primary); cursor: ${currentPage === 1 ? 'not-allowed' : 'pointer'}; opacity: ${currentPage === 1 ? '0.4' : '1'}; transition: all 0.2s;" ${currentPage === 1 ? 'disabled' : ''} onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='var(--bg-secondary)'" title="First Page">
+                            <i class="fas fa-angles-left"></i>
+                        </button>
+                        <button onclick="loadActivityPanel('${identifier}', ${currentPage > 1 ? currentPage - 1 : 1})" style="display: flex; justify-content: center; align-items: center; width: 28px; height: 28px; font-size: 0.75rem; border-radius: 6px; border: 1px solid var(--border-light); background: var(--bg-secondary); color: var(--text-primary); cursor: ${currentPage === 1 ? 'not-allowed' : 'pointer'}; opacity: ${currentPage === 1 ? '0.4' : '1'}; transition: all 0.2s;" ${currentPage === 1 ? 'disabled' : ''} onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='var(--bg-secondary)'" title="Previous Page">
+                            <i class="fas fa-angle-left"></i>
+                        </button>
+                        <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; margin: 0 4px;">Page ${currentPage} of ${totalPages}</span>
+                        <button onclick="loadActivityPanel('${identifier}', ${currentPage < totalPages ? currentPage + 1 : totalPages})" style="display: flex; justify-content: center; align-items: center; width: 28px; height: 28px; font-size: 0.75rem; border-radius: 6px; border: 1px solid var(--border-light); background: var(--bg-secondary); color: var(--text-primary); cursor: ${currentPage >= totalPages ? 'not-allowed' : 'pointer'}; opacity: ${currentPage >= totalPages ? '0.4' : '1'}; transition: all 0.2s;" ${currentPage >= totalPages ? 'disabled' : ''} onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='var(--bg-secondary)'" title="Next Page">
+                            <i class="fas fa-angle-right"></i>
+                        </button>
+                        <button onclick="loadActivityPanel('${identifier}', ${totalPages})" style="display: flex; justify-content: center; align-items: center; width: 28px; height: 28px; font-size: 0.75rem; border-radius: 6px; border: 1px solid var(--border-light); background: var(--bg-secondary); color: var(--text-primary); cursor: ${currentPage >= totalPages ? 'not-allowed' : 'pointer'}; opacity: ${currentPage >= totalPages ? '0.4' : '1'}; transition: all 0.2s;" ${currentPage >= totalPages ? 'disabled' : ''} onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='var(--bg-secondary)'" title="Last Page">
+                            <i class="fas fa-angles-right"></i>
+                        </button>
+                    </div>
+
+                `;
+            }
+
+            list.innerHTML = itemsHtml + paginationHtml;
+            panelBody.onscroll = null;
+            panelBody.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (e) {
+            BnLog('ERROR', 'Failed to load activity:', e);
+            if (page === 1) {
+                panelBody.innerHTML = `<div class="files-error"><span>Failed to fetch activity logs</span></div>`;
+            }
+        }
+    }
+
+    window.loadActivityPanel = loadActivityPanel;
 
     function setupKeyboardNavigation() {
         document.addEventListener('keydown', (e) => {
@@ -15476,7 +15912,7 @@ ignite();
 
     setInterval(sendTelemetryHeartbeat, 60 * 1000);
     setTimeout(sendTelemetryHeartbeat, 5000);
-
+    //
     function setupEasterEggs() {
         document.addEventListener('keydown', (e) => {
             state.coinCollector.konamiCode.push(e.code);
@@ -15490,6 +15926,257 @@ ignite();
             }
         });
     }
+    //
+    function isAprilFools() {
+        if (state._aprilFoolsOverride) return true;
+        const now = new Date();
+        return now.getMonth() === 3 && now.getDate() === 1;
+    }
+
+    function initAprilFools() {
+        if (window._bhAfInit) return;
+
+        const afKey = 'bh-april-fools-done';
+        const isAF = isAprilFools();
+
+        if (!isAF) {
+            if (localStorage.getItem(afKey)) {
+                localStorage.removeItem(afKey);
+                const originalPack = localStorage.getItem('bh-april-fools-original-pack');
+                if (originalPack) {
+                    if (state.settings.soundPack === 'clown') {
+                        SoundManager.setSoundPack(originalPack);
+                    }
+                    localStorage.removeItem('bh-april-fools-original-pack');
+                }
+            }
+            return;
+        }
+
+        window._bhAfInit = true;
+
+        if (!state._aprilFoolsOverride && (!localStorage.getItem(afKey) || localStorage.getItem(afKey) !== 'true')) {
+            localStorage.setItem(afKey, 'true');
+            BnLog('STARTUP', '🤡 april fools!');
+        }
+
+        state._aprilFools = { clicks: 0, triggered: false };
+        state._afInitialized = true;
+
+        document.addEventListener('click', handleAprilFoolsCoinClick);
+
+        state._aprilFoolsObserver = new MutationObserver(() => {
+            if (state._aprilFools && state._aprilFools.clicks > 0 && !state._aprilFools.triggered) {
+                applyAprilFoolsOverlay();
+            }
+        });
+
+        const content = document.getElementById('bh-main-content');
+        if (content) {
+            state._aprilFoolsObserver.observe(content, { childList: true, subtree: true });
+        }
+    }
+
+    function handleAprilFoolsCoinClick(e) {
+        if (!isAprilFools()) return;
+        if (!state._aprilFools || state._aprilFools.triggered) return;
+        if (state.coinCollector && parseInt(state.coinCollector.currentCoins, 10) === 0) return;
+
+        const statCard = e.target.closest('.stat-card.primary');
+        if (!statCard) return;
+
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        e.stopPropagation();
+
+        state._aprilFools.clicks++;
+        const clicks = state._aprilFools.clicks;
+        const maxClicks = 25;
+
+        const baseFreq = 200 + (clicks * 5);
+        const endFreq = baseFreq * (1.2 + (clicks / maxClicks));
+        SoundManager.playTone(baseFreq, 150, 'square', 0.2 + (clicks / maxClicks) * 0.15, endFreq);
+
+        const shakeIntensity = Math.min(clicks * 0.8, 20);
+        const bounceScale = 1 + Math.min(clicks * 0.015, 0.35);
+
+        statCard.style.transition = 'transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)';
+        statCard.style.transform = `scale(${bounceScale}) rotate(${(Math.random() - 0.5) * shakeIntensity}deg)`;
+
+        setTimeout(() => {
+            statCard.style.transform = `scale(1) rotate(${(Math.random() - 0.5) * shakeIntensity * 0.3}deg)`;
+        }, 150);
+
+        setTimeout(() => {
+            statCard.style.transform = '';
+            statCard.style.transition = '';
+        }, 300);
+
+        applyAprilFoolsOverlay();
+
+        if (clicks >= maxClicks) {
+            state._aprilFools.triggered = true;
+            setTimeout(() => triggerAprilFoolsReveal(), 400);
+        }
+    }
+
+    function applyAprilFoolsOverlay() {
+        if (!state._aprilFools || state._aprilFools.clicks <= 0) return;
+
+        const statCard = document.querySelector('.stat-card.primary');
+        if (!statCard) return;
+
+        const h3 = statCard.querySelector('.stat-info h3');
+        if (!h3) return;
+
+        let overlay = h3.querySelector('.af-zeroes');
+        if (!overlay) {
+            overlay = document.createElement('span');
+            overlay.className = 'af-zeroes';
+            overlay.style.cssText = 'display:inline-block;position:relative;overflow:hidden;width:1.6em;height:1.1em;vertical-align:text-bottom;margin-left:2px;';
+            overlay.innerHTML = '<span style="display:block;position:absolute;left:0;bottom:-100%;width:100%;transition:bottom 0.4s cubic-bezier(0.34,1.56,0.64,1);font-weight:bold;text-align:left;">00</span>';
+            h3.appendChild(overlay);
+        }
+
+        const inner = overlay.querySelector('span');
+        if (inner) {
+            const progress = Math.min(state._aprilFools.clicks / 25, 1);
+            const bottomVal = -100 + (progress * 96);
+            inner.style.bottom = bottomVal + '%';
+        }
+    }
+
+    function triggerAprilFoolsReveal(skipAnimation = false) {
+        const content = document.getElementById('bh-main-content');
+        if (!content) return;
+        if (content.querySelector('#af-reveal')) return;
+
+        if (state._aprilFoolsObserver) state._aprilFoolsObserver.disconnect();
+
+        if (skipAnimation) {
+            const dashGrid = content.querySelector('.dashboard-grid');
+            if (dashGrid) dashGrid.style.display = 'none';
+            showRevealUI(content);
+            return;
+        }
+
+        SoundManager.playTone(200, 200, 'square', 0.3);
+        setTimeout(() => SoundManager.playTone(150, 300, 'sawtooth', 0.3), 200);
+        setTimeout(() => SoundManager.playTone(100, 500, 'square', 0.35), 500);
+
+        document.body.style.animation = 'af-screen-shake 0.5s ease-in-out';
+
+        setTimeout(() => {
+            document.body.style.animation = '';
+
+            const dashGrid = content.querySelector('.dashboard-grid');
+            if (dashGrid) {
+                const children = Array.from(dashGrid.children);
+                children.forEach((child, i) => {
+                    child.style.transition = `transform ${0.6 + i * 0.1}s cubic-bezier(0.55, 0, 1, 0.45), opacity ${0.4 + i * 0.1}s ease`;
+                    child.style.transformOrigin = `${50 + (Math.random() - 0.5) * 40}% 0%`;
+
+                    requestAnimationFrame(() => {
+                        child.style.transform = `translateY(${window.innerHeight + 200}px) rotate(${(Math.random() - 0.5) * 90}deg)`;
+                        child.style.opacity = '0';
+                    });
+                });
+            }
+
+            setTimeout(() => {
+                if (dashGrid) dashGrid.style.display = 'none';
+                showRevealUI(content, true);
+            }, 1200);
+        }, 500);
+    }
+
+    function aprilFoolsRHTML() {
+        return `
+            <div id="af-reveal" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:2rem;animation:af-reveal-pop 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards;">
+                <h1 style="font-size:4rem;font-weight:900;background:linear-gradient(135deg,#ff6b6b,#ffd93d,#6bcb77,#4d96ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;text-shadow:none;">
+                    COIN OVERLOAAAAAAAADD@!!
+                </h1>
+                <p style="font-size:1.2rem;color:var(--text-secondary);text-align:center;max-width:400px;">
+                    All your coins are gone!<br>Click the button below to go back in time before the incident.
+                </p>
+                <button onclick="resetAprilFoolsDashboard()" style="
+                    padding:1rem 2.5rem;
+                    border:none;
+                    border-radius:12px;
+                    background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));
+                    color:white;
+                    font-size:1.1rem;
+                    font-weight:700;
+                    cursor:pointer;
+                    display:flex;
+                    align-items:center;
+                    gap:0.75rem;
+                    transition:transform 0.2s ease,box-shadow 0.2s ease;
+                    box-shadow:var(--shadow-lg);
+                " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    <i class="fas fa-hammer"></i>
+                </button>
+            </div>
+        `;
+    }
+
+    function showRevealUI(content, playSound = false) {
+        if (content.querySelector('#af-reveal')) return;
+        content.insertAdjacentHTML('afterbegin', aprilFoolsRHTML());
+        if (playSound) {
+            SoundManager.playTone(400, 150, 'square', 0.25);
+            setTimeout(() => SoundManager.playTone(500, 150, 'square', 0.25), 150);
+            setTimeout(() => SoundManager.playTone(600, 200, 'square', 0.3), 300);
+        }
+    }
+
+    window.resetAprilFoolsDashboard = () => {
+        SoundManager.playButtonClick();
+        state._aprilFoolsDone = true;
+
+        if (state._aprilFools) {
+            state._aprilFools.clicks = 0;
+            state._aprilFools.triggered = false;
+        }
+
+        const reveal = document.getElementById('af-reveal');
+        if (reveal) {
+            reveal.style.animation = 'af-reveal-pop 0.3s ease reverse forwards';
+            setTimeout(() => reveal.remove(), 300);
+        }
+
+        const content = document.getElementById('bh-main-content');
+        const dashGrid = content?.querySelector('.dashboard-grid');
+        if (dashGrid) dashGrid.style.display = '';
+
+        setTimeout(() => {
+            updateDashboard(true);
+
+            if (state._aprilFoolsObserver) {
+                const c = document.getElementById('bh-main-content');
+                if (c) state._aprilFoolsObserver.observe(c, { childList: true, subtree: true });
+            }
+        }, 350);
+    };
+
+    window.aprilFools = () => {
+        state._aprilFoolsOverride = true;
+        state._aprilFoolsDone = false;
+
+        if (!state._aprilFools) {
+            state._aprilFools = { clicks: 0, triggered: false };
+        } else {
+            state._aprilFools.clicks = 0;
+            state._aprilFools.triggered = false;
+        }
+
+        initAprilFools();
+        updateDashboard(true);
+
+        console.log('%c🤡 Every day is April 1st!', 'color: #ffd93d; font-size: 16px; font-weight: bold;');
+    };
+    //
+
 
     function isTransactionDeduction(transaction) {
         const text = transaction.text || '';
@@ -16157,6 +16844,13 @@ ignite();
     ` : '';
 
         const showFilters = state.settings.activityCacheDays > 7;
+
+        if (isAprilFools() && !state._aprilFoolsDone && state._aprilFools?.triggered) {
+            return `
+                ${apiStatusWarning}
+                ${aprilFoolsRHTML()}
+            `;
+        }
 
         return `
       ${apiStatusWarning}
@@ -18287,6 +18981,25 @@ ignite();
 @keyframes bananaFloat {
     0%, 100% {transform:translateY(0px); }
     50% {transform:translateY(-6px); }
+}
+
+@keyframes af-screen-shake {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-8px, 4px); }
+    20% { transform: translate(8px, -4px); }
+    30% { transform: translate(-6px, 6px); }
+    40% { transform: translate(6px, -2px); }
+    50% { transform: translate(-4px, 4px); }
+    60% { transform: translate(4px, -4px); }
+    70% { transform: translate(-2px, 2px); }
+    80% { transform: translate(2px, -2px); }
+    90% { transform: translate(-1px, 1px); }
+}
+
+@keyframes af-reveal-pop {
+    0% { transform: scale(0.3); opacity: 0; }
+    60% { transform: scale(1.08); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
 }
 
 #bh-floating-banana:hover {
@@ -20428,7 +21141,15 @@ input[type="number"].modern-input {
     pointer-events: none;
     z-index: 100;
 }
-.startup-var-input:hover + .banana-tooltip {
+.banana-tooltip-sm {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    border-color: var(--border-light);
+}
+.startup-var-input:hover + .banana-tooltip,
+.activity-actor-wrapper:hover .banana-tooltip {
     opacity: 1;
     visibility: visible;
     transform: translateX(-50%) translateY(0);
@@ -23079,7 +23800,7 @@ input[type="checkbox"].file-select-cb,
         if (!item) return;
 
         if (isNewerVersion(item.version, CONFIG.SCRIPT_VERSION)) {
-            showToast(`Incompatible: Plugin version ${item.version} requires a newer BananaBurner version`, 'error');
+            showToast(`Incompatible: Plugin version ${item.version} requires a newer script version`, 'error');
             return;
         }
 
@@ -24104,4 +24825,4 @@ input[type="checkbox"].file-select-cb,
 // Termux Labs 2026 - @agentzzrp (relentiousdragon), @paccman_0 on Discord
 // Shoutout to every early adopter, everyone who suggested, reported a bug, or gave feedback!
 // If you're confused by a function or something, send me a DM on Discord @agentzzrp, if i'm unavailable, dm @paccman_0 instead but only for plugin framework related stuff.
-//////////////////////
+///////////////////////
