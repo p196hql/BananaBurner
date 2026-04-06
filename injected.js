@@ -5909,12 +5909,12 @@ debug:
                 theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
                 size: 'normal',
                 callback: function (response) {
-                    document.getElementById('bh-captcha-submit').style.display = 'flex';
-                    //showToast('CAPTCHA solved! click verify to continue', 'success');
+                    const submitBtn = document.getElementById('bh-captcha-submit');
+                    if (submitBtn) submitBtn.style.display = 'flex';
                 },
                 'expired-callback': function () {
-                    document.getElementById('bh-captcha-submit').style.display = 'none';
-                    //showToast('CAPTCHA expired, please solve again', 'warn');
+                    const submitBtn = document.getElementById('bh-captcha-submit');
+                    if (submitBtn) submitBtn.style.display = 'none';
                 }
             });
 
