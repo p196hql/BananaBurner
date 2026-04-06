@@ -256,6 +256,34 @@
         }
     };
 
+    window.__bh_gcImageCache = (forceAll = false) => {
+        try {
+            const cacheKeys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('bh-img-cache-')) {
+                    try {
+                        const data = JSON.parse(localStorage.getItem(key));
+                        cacheKeys.push({ key, timestamp: data.timestamp, size: localStorage.getItem(key).length });
+                    } catch (e) { localStorage.removeItem(key); }
+                }
+            }
+            if (forceAll) {
+                cacheKeys.forEach(k => localStorage.removeItem(k.key));
+                return;
+            }
+            cacheKeys.sort((a, b) => a.timestamp - b.timestamp);
+            let removed = 0;
+            for (const item of cacheKeys) {
+                const isStale = (Date.now() - item.timestamp) > (7 * 24 * 60 * 60 * 1000);
+                if (isStale || cacheKeys.length - removed > 20) {
+                    localStorage.removeItem(item.key);
+                    removed++;
+                }
+            }
+        } catch (e) { }
+    };
+
     window.__bh_getCachedImageSync = (url) => {
         try {
             const cached = localStorage.getItem(`bh-img-cache-${url}`);
@@ -263,6 +291,7 @@
         } catch (e) { }
         return url;
     };
+
 
     (async function initIconCache() {
         const CACHE_EXPIRY = 7 * 24 * 60 * 60 * 1000;
@@ -5405,6 +5434,9 @@ debug:
         }
 
         cleanupActivityCache();
+        if (window.__bh_gcImageCache) {
+            try { window.__bh_gcImageCache(); } catch (e) { BnLog('WARN', 'Image cache cleanup failed:', e); }
+        }
 
         try {
             const serverIds = state.serverCreator.servers.map(s => s.serverid.toString());
@@ -12441,8 +12473,8 @@ debug:
                                 paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.53.0/min/vs' }
                             });
                             monacoRequire(['vs/editor/editor.main'], () => {
-                                if (peDefine && !window.define?.monaco) window.define = peDefine;
-                                if (peRequire && !window.require?.config) window.require = peRequire;
+                                // if (peDefine && !window.define?.monaco) window.define = peDefine;
+                                // if (peRequire && !window.require?.config) window.require = peRequire;
 
                                 monacoLoaded = true;
                                 resolve();
@@ -14322,7 +14354,7 @@ ignite();
         .shake { animation: shake 0.4s ease-in-out; }
       </style>
       <div class="modal-overlay"></div>
-      <div class="modal-container" style="max-width: 600px; border: 1px solid var(--border-light); background: var(--modal-bg-primary);">
+      <div class="modal-container" style="max-width: 600px; border: 1px solid var(--border-light); background: var(--bg-primary) !important;">
         <div class="modal-header" style="margin: 0; padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); background: var(--modal-bg-secondary); display: flex; align-items: center; justify-content: space-between;">
           <div class="modal-title" style="display: flex; align-items: center; gap: 0.75rem;">
             <i class="fas ${isEdit ? 'fa-shield-alt' : 'fa-user-plus'}" style="color: var(--accent-primary); font-size: 1.2rem;"></i>
@@ -24401,8 +24433,8 @@ input[type="checkbox"].file-select-cb,
 
         try {
             const api = createBananaAPI(id);
-            const pluginFactory = new Function('BananaAPI', code);
-            const pluginInstance = pluginFactory(api);
+            const pluginFactory = new Function('BananaAPI', 'api', code);
+            const pluginInstance = pluginFactory(api, api);
 
             if (!pluginInstance || typeof pluginInstance.init !== 'function') {
                 throw new Error('Plugin must export an object with an init() function');
@@ -24440,18 +24472,18 @@ input[type="checkbox"].file-select-cb,
 
             modal.innerHTML = `
       <div class="modal-overlay"></div>
-             <div class="modal-container" style="max-width: 500px; border: 1px solid var(--border-light); background: var(--modal-bg-primary);">
-        <div class="modal-header" style="margin: 0; padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); background: var(--modal-bg-secondary);">
+             <div class="modal-container" style="max-width: 500px; border: 1px solid var(--border-light); background: var(--bg-primary) !important;">
+        <div class="modal-header" style="margin: 0; padding: 1.25rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); background: var(--modal-tertiary-bg, var(--modal-bg-secondary)) !important;">
           <div class="modal-title" style="display: flex; align-items: center; gap: 0.75rem;">
             <i class="fas fa-shield-alt" style="color: var(--accent-warning); font-size: 1.2rem;"></i>
                 <h3 style="margin: 0; color: var(--modal-text-primary); font-size: 1.1rem;">Security Permission</h3>
             </div>
           <button class="modal-close" style="background: transparent; border: none; color: var(--modal-text-primary); cursor: pointer;"><i class="fas fa-times"></i></button>
            </div>
-          <div class="modal-body" style="padding: 1.5rem;">
+          <div class="modal-body" style="padding: 1.5rem; background: var(--bg-primary) !important;">
     
           <p style="margin: 0 0 1rem 0; color: var(--modal-text-primary); line-height: 1.5;">
-            enable the plugin <strong>${name}</strong> by <strong>${author}?</strong>.
+            enable plugin <strong>${name}</strong> by <strong>${author}?</strong>.
             </p>
           <p style="margin: 0 0 1rem 0; color: var(--modal-text-secondary); font-size: 0.9rem; line-height: 1.5;">
             This plugin will have broad access to your account, including:
@@ -24466,7 +24498,7 @@ input[type="checkbox"].file-select-cb,
              Only trust plugins from developers you know or have verified.
           </p>
         </div>
-        <div class="modal-footer" style="padding: 1rem 1.5rem; background: var(--modal-bg-secondary); border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <div class="modal-footer" style="padding: 1rem 1.5rem; background: var(--modal-tertiary-bg, var(--modal-bg-secondary)) !important; border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; gap: 0.75rem;">
             <button class="btn btn-secondary btn-deny" style="padding: 0.5rem 1.25rem; border-radius: 8px;">Deny</button>
           <button class="btn btn-primary btn-trust" style="padding: 0.5rem 1.25rem; border-radius: 8px; background: var(--accent-warning); color: #000; font-weight: 700;">Trust & Enable</button>
            </div>
@@ -24496,7 +24528,11 @@ input[type="checkbox"].file-select-cb,
 
         try {
             if (plugin.instance && typeof plugin.instance.destroy === 'function') {
-                plugin.instance.destroy();
+                try {
+                    plugin.instance.destroy(plugin.api);
+                } catch (e) {
+                    BnLog('WARN', `Plugin ${id} threw error during destruction:`, e);
+                }
             }
 
             if (plugin.widgets) {
@@ -24605,7 +24641,7 @@ input[type="checkbox"].file-select-cb,
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body" style="padding: 1.5rem;">
+                <div class="modal-body" style="padding: 1.5rem; background: var(--bg-primary) !important;">
                     <div id="local-upload-zone" style="border: 2px dashed var(--border-light); border-radius: 12px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.3s ease; background: rgba(255,255,255,0.02);">
                         <i class="fas fa-folder-open" style="font-size: 3rem; color: var(--accent-primary); margin-bottom: 1rem; opacity: 0.8;"></i>
                         <p style="margin: 0; font-weight: 500;">Select Plugin Folder</p>
@@ -24624,7 +24660,7 @@ input[type="checkbox"].file-select-cb,
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer" style="padding: 1rem; border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <div class="modal-footer" style="padding: 1rem; border-top: 1px solid var(--border-light); background: var(--modal-tertiary-bg, var(--modal-bg-secondary)) !important; border-radius: 0 0 12px 12px; display: flex; justify-content: flex-end; gap: 0.75rem;">
                     <button class="btn btn-outline" onclick="document.getElementById('bh-local-plugin-modal').remove()">Cancel</button>
                     <button class="btn btn-primary" id="btn-load-local" disabled>Load & Enable</button>
                 </div>
@@ -24746,8 +24782,22 @@ input[type="checkbox"].file-select-cb,
             const trusted = await showPluginSecurityPrompt(id, manifest);
             if (!trusted) return;
 
-            localStorage.setItem(`bh-plugin-code-${id}`, parsedData.code);
-            localStorage.setItem(`bh-market-item-plugins-${id}`, JSON.stringify(manifest));
+            try {
+                localStorage.setItem(`bh-plugin-code-${id}`, parsedData.code);
+                localStorage.setItem(`bh-market-item-plugins-${id}`, JSON.stringify(manifest));
+            } catch (err) {
+                if (err.name === 'QuotaExceededError') {
+                    if (window.__bh_gcImageCache) window.__bh_gcImageCache(true);
+                    try {
+                        localStorage.setItem(`bh-plugin-code-${id}`, parsedData.code);
+                        localStorage.setItem(`bh-market-item-plugins-${id}`, JSON.stringify(manifest));
+                    } catch (retryErr) {
+                        return window.showToast('Storage quota exceeded. Try uninstalling some plugins or themes.', 'error');
+                    }
+                } else {
+                    return window.showToast('Failed to save & load plugin.', 'error');
+                }
+            }
 
             const existingIdx = state.plugins.localPlugins.findIndex(p => p.id === id);
             if (existingIdx !== -1) {
