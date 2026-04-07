@@ -18,7 +18,7 @@
 - Bug fixes and improvements
 - Other
 
-Update by reinstalling the extension: https://discord.com/channels/884145104401608735/1476175295684939807/1476176972940841093
+Update by reinstalling the extension
 
 If there are any issues, let us know about it on Discord @agentzzrp or @paccman_0!<br>
 Release #23 stable, some features are unavailable for userscript users.
